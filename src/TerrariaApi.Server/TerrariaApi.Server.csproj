@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <BuildMod>false</BuildMod>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>TerrariaApi.Server</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>annotations</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <Import Project="..\..\tModLoader.targets" />
+  <ItemGroup>
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.dll" />
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.CodeFixes.dll" />
+    <InternalsVisibleTo Include="tShockLoader" />
+  </ItemGroup>
+</Project>
