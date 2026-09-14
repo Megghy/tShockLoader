@@ -1,0 +1,5 @@
+displayName = tShock Loader
+author = Megghy
+version = 0.1.0
+side = Server
+dllReferences = TerrariaApi.Server, TShockAPI, BCrypt.Net-Next, GetText, HttpServer, MySqlConnector, Npgsql, ReflectionMagic, System.Data.SQLite

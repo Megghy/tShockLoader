@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <tMLSteamPath Condition="'$(tMLSteamPath)' == ''">D:\SteamLibrary\steamapps\common\tModLoader</tMLSteamPath>
+  </PropertyGroup>
+  <Target Name="RequireTmlInstall" BeforeTargets="Restore;Build">
+    <Error Condition="!Exists('$(tMLSteamPath)\tMLMod.targets')"
+           Text="tModLoader not found at '$(tMLSteamPath)'. Pass /p:tMLSteamPath=... to the install directory." />
+  </Target>
+  <Import Project="$(tMLSteamPath)\tMLMod.targets" Condition="Exists('$(tMLSteamPath)\tMLMod.targets')" />
+</Project>

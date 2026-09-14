@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <BuildMod>false</BuildMod>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>tShockLoader</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>annotations</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <Import Project="..\..\tModLoader.targets" />
+  <ItemGroup>
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.dll" />
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.CodeFixes.dll" />
+    <ProjectReference Include="..\TerrariaApi.Server\TerrariaApi.Server.csproj" />
+    <ProjectReference Include="..\TShockAPI\TShockAPI.csproj" />
+  </ItemGroup>
+  <Target Name="StagePackedLibraries" BeforeTargets="BuildMod" Condition="'$(BuildMod)' == 'true'">
+    <ItemGroup>
+      <_PackedLib Include="$(TargetDir)TerrariaApi.Server.dll" />
+      <_PackedLib Include="$(TargetDir)TShockAPI.dll" />
+      <_PackedLib Include="$(TargetDir)BCrypt.Net-Next.dll" />
+      <_PackedLib Include="$(TargetDir)GetText.dll" />
+      <_PackedLib Include="$(TargetDir)HttpServer.dll" />
+      <_PackedLib Include="$(TargetDir)MySqlConnector.dll" />
+      <_PackedLib Include="$(TargetDir)Npgsql.dll" />
+      <_PackedLib Include="$(TargetDir)ReflectionMagic.dll" />
+      <_PackedLib Include="$(TargetDir)System.Data.SQLite.dll" />
+      <_PackedLib Include="$(TargetDir)SQLite.Interop.dll" Condition="Exists('$(TargetDir)SQLite.Interop.dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PackedLib)" DestinationFolder="$(ProjectDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
