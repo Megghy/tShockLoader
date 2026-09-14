@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.dll binary
+*.exe binary
+*.png binary
+*.ico binary
+*.snk binary
+*.sqlite binary
+*.db binary
