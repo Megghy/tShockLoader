@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <BuildMod>false</BuildMod>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>TShockAPI</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>annotations</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>5.2.3</Version>
+  </PropertyGroup>
+  <Import Project="..\..\tModLoader.targets" />
+  <ItemGroup>
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.dll" />
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.CodeFixes.dll" />
+    <ProjectReference Include="..\TerrariaApi.Server\TerrariaApi.Server.csproj" />
+    <Reference Include="BCrypt.Net-Next">
+      <HintPath>lib\BCrypt.Net-Next.dll</HintPath>
+    </Reference>
+    <Reference Include="GetText">
+      <HintPath>lib\GetText.dll</HintPath>
+    </Reference>
+    <Reference Include="HttpServer">
+      <HintPath>lib\HttpServer.dll</HintPath>
+    </Reference>
+    <Reference Include="MySqlConnector">
+      <HintPath>lib\MySqlConnector.dll</HintPath>
+    </Reference>
+    <Reference Include="Npgsql">
+      <HintPath>lib\Npgsql.dll</HintPath>
+    </Reference>
+    <Reference Include="ReflectionMagic">
+      <HintPath>lib\ReflectionMagic.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data.SQLite">
+      <HintPath>lib\System.Data.SQLite.dll</HintPath>
+    </Reference>
+    <Using Include="ReflectionMagic" />
+    <None Include="lib\SQLite.Interop.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
