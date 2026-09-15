@@ -42,8 +42,6 @@ namespace Rests
 		public Dictionary<string, TokenData> Tokens { get; protected set; }
 		public Dictionary<string, TokenData> AppTokens { get; protected set; }
 
-		private RNGCryptoServiceProvider _rng = new RNGCryptoServiceProvider();
-
 		public SecureRest(IPAddress ip, int port)
 			: base(ip, port)
 		{
@@ -156,7 +154,7 @@ namespace Rests
 			var randbytes = new byte[32];
 			do
 			{
-				_rng.GetBytes(randbytes);
+				RandomNumberGenerator.Fill(randbytes);
 				tokenHash = randbytes.Aggregate("", (s, b) => s + b.ToString("X2"));
 			} while (Tokens.ContainsKey(tokenHash));
 

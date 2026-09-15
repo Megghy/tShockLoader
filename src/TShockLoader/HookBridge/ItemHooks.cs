@@ -23,6 +23,13 @@ internal static class ItemHooks
 		Hooks.Chest.QuickStack += OnQuickStack;
 	}
 
+	public static void Detach()
+	{
+		Terraria.On_Item.SetDefaults_int_bool_ItemVariant -= OnSetDefaults;
+		Terraria.On_Item.netDefaults -= OnNetDefaults;
+		Hooks.Chest.QuickStack -= OnQuickStack;
+	}
+
 	private static void OnNetDefaults(On_Item.orig_netDefaults orig, Item self, int type)
 	{
 		if (!_hookManager.InvokeItemNetDefaults(ref type, self))

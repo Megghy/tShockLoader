@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <BuildMod>false</BuildMod>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>P3Content</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <Import Project="..\..\tModLoader.targets" />
+  <ItemGroup>
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.dll" />
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.CodeFixes.dll" />
+  </ItemGroup>
+</Project>

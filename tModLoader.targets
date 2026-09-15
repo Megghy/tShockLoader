@@ -7,4 +7,19 @@
            Text="tModLoader not found at '$(tMLSteamPath)'. Pass /p:tMLSteamPath=... to the install directory." />
   </Target>
   <Import Project="$(tMLSteamPath)\tMLMod.targets" Condition="Exists('$(tMLSteamPath)\tMLMod.targets')" />
+  <!-- tMLMod.targets packs every project when -p:BuildMod=true is passed. Only the loader is a TML mod.
+       TML requires the pack folder name to match AssemblyName; the repo folder is TShockLoader on Windows. -->
+  <Target Name="BuildMod" AfterTargets="Build" Condition="'$(BuildMod)' == 'true' and '$(AssemblyName)' == 'tShockLoader'">
+    <PropertyGroup>
+      <TmlPackRoot>$(TEMP)\tShockLoader-pack</TmlPackRoot>
+      <TmlPackDir>$(TmlPackRoot)\tShockLoader</TmlPackDir>
+    </PropertyGroup>
+    <RemoveDir Directories="$(TmlPackRoot)" />
+    <MakeDir Directories="$(TmlPackDir)" />
+    <ItemGroup>
+      <TmlPackFiles Include="$(ProjectDir)**\*" Exclude="$(ProjectDir)bin\**\*;$(ProjectDir)obj\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(TmlPackFiles)" DestinationFiles="@(TmlPackFiles->'$(TmlPackDir)\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Exec Command="dotnet $(tMLServerPath) -build $(TmlPackDir) -eac $(TargetPath) -define &quot;$(DefineConstants)&quot; -unsafe $(AllowUnsafeBlocks) $(ExtraBuildModFlags)" WorkingDirectory="$(tMLSteamPath)" />
+  </Target>
 </Project>

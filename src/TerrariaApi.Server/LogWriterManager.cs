@@ -24,11 +24,13 @@ namespace TerrariaApi.Server
 		/// If set to false, no default log writer will be set at first, but a new one can be added with
 		/// <see cref="Attach(ILogWriter)"/> later.
 		/// </param>
-		internal LogWriterManager(bool enabled)
+		internal LogWriterManager(bool enabled, string? logFilePath = null)
 		{
 			if (enabled)
 			{
-				this.DefaultLogWriter = new ServerLogWriter();
+				this.DefaultLogWriter = string.IsNullOrEmpty(logFilePath)
+					? new ServerLogWriter()
+					: new ServerLogWriter(logFilePath);
 				this.WrappedLogWriter = this.DefaultLogWriter;
 			}
 		}

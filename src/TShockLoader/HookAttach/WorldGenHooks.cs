@@ -29,11 +29,14 @@ namespace tShockLoader.HookAttach
 
         private static bool On_WorldGen_PlaceTile(On_WorldGen.orig_PlaceTile orig, int x, int y, int type, bool mute, bool forced, int plr, int style)
         {
-            // 只在硬模式下调用
-            if (Main.hardMode)
-            {
-                return OTAPI.Hooks.WorldGen.InvokeHardmodeTilePlace(x, y, type, mute, forced, plr, style);
-            }
+            if (!Main.hardMode)
+                return orig(x, y, type, mute, forced, plr, style);
+
+            var result = OTAPI.Hooks.WorldGen.InvokeHardmodeTilePlace(x, y, type, mute, forced, plr, style);
+            if (result == OTAPI.HardmodeTileUpdateResult.Cancel)
+                return false;
+            if (result == OTAPI.HardmodeTileUpdateResult.ContinueWithoutUpdate)
+                return true;
             return orig(x, y, type, mute, forced, plr, style);
         }
 

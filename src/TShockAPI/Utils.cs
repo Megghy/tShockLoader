@@ -246,7 +246,7 @@ namespace TShockAPI
 			int type = -1;
 			if (Int32.TryParse(text, out type))
 			{
-				if (type >= Terraria.ID.ItemID.Count)
+				if (type >= ContentIds.Items)
 					return new List<Item>();
 				return new List<Item> { GetItemById(type) };
 			}
@@ -277,7 +277,7 @@ namespace TShockAPI
 		{
 			var startswith = new List<int>();
 			var contains = new List<int>();
-			for (int i = 1; i < ItemID.Count; i++)
+			for (int i = 1; i < ContentIds.Items; i++)
 			{
 				var currentName = Lang.GetItemNameValue(i);
 				if (!string.IsNullOrEmpty(currentName))
@@ -348,7 +348,7 @@ namespace TShockAPI
 			int type = -1;
 			if (int.TryParse(idOrName, out type))
 			{
-				if (type >= Terraria.ID.NPCID.Count)
+				if (type >= ContentIds.Npcs)
 					return new List<NPC>();
 				return new List<NPC> { GetNPCById(type) };
 			}
@@ -376,7 +376,7 @@ namespace TShockAPI
 		{
 			var startswith = new List<int>();
 			var contains = new List<int>();
-			for (int i = -17; i < NPCID.Count; i++)
+			for (int i = -17; i < ContentIds.Npcs; i++)
 			{
 				var currentName = Lang.GetNPCNameValue(i);
 				if (!string.IsNullOrEmpty(currentName))
@@ -424,7 +424,7 @@ namespace TShockAPI
 		/// <returns>name</returns>
 		public string GetBuffName(int id)
 		{
-			return (id > 0 && id < Terraria.ID.BuffID.Count) ? Lang.GetBuffName(id) : null;
+			return (id > 0 && id < ContentIds.Buffs) ? Lang.GetBuffName(id) : null;
 		}
 
 		/// <summary>
@@ -434,7 +434,7 @@ namespace TShockAPI
 		/// <returns>description</returns>
 		public string GetBuffDescription(int id)
 		{
-			return (id > 0 && id < Terraria.ID.BuffID.Count) ? Lang.GetBuffDescription(id) : null;
+			return (id > 0 && id < ContentIds.Buffs) ? Lang.GetBuffDescription(id) : null;
 		}
 
 		/// <summary>
@@ -446,7 +446,7 @@ namespace TShockAPI
 		{
 			var startswith = new List<int>();
 			var contains = new List<int>();
-			for (int i = 1; i < BuffID.Count; i++)
+			for (int i = 1; i < ContentIds.Buffs; i++)
 			{
 				var currentName = Lang.GetBuffName(i);
 				if (!string.IsNullOrWhiteSpace(currentName))
@@ -573,6 +573,7 @@ namespace TShockAPI
 
 			if (save)
 				SaveManager.Instance.SaveWorld();
+			Netplay.SaveOnServerExit = false;
 
 			foreach (var player in TShock.Players.Where(p => p != null))
 			{
@@ -587,7 +588,9 @@ namespace TShockAPI
 			TShock.Utils.Broadcast(reason, Color.Red);
 
 			// Disconnect after kick as that signifies server is exiting and could cause a race
+			Netplay.HasClients = false;
 			Netplay.Disconnect = true;
+			Netplay.TcpListener?.StopListening();
 		}
 
 		/// <summary>
@@ -1178,10 +1181,11 @@ namespace TShockAPI
 		}
 
 		/// <summary>Computes the max styles...</summary>
-		internal void ComputeMaxStyles()
+		public void ComputeMaxStyles()
 		{
 			var item = new Item();
-			for (int i = 0; i < Terraria.ID.ItemID.Count; i++)
+			GetDataHandlers.MaxPlaceStyles.Clear();
+			for (int i = 0; i < ContentIds.Items; i++)
 			{
 				item.netDefaults(i);
 				if (item.placeStyle >= 0)
@@ -1217,9 +1221,8 @@ namespace TShockAPI
 			// 确保我们操作的是静态类，或者至少目标字段是静态的
 			// BindingFlags.Static: 指定查找静态成员。
 			// BindingFlags.NonPublic: 指定查找非公共成员（包括 private 和 internal）。
-			FieldInfo fieldInfo = staticClassType.GetField(fieldName, BindingFlags.Static) ?? throw new ArgumentException($"Private static field '{fieldName}' not found in type '{staticClassType.FullName}'. Ensure the field name is correct and it is indeed a static field.");
+			FieldInfo fieldInfo = staticClassType.GetField(fieldName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ?? throw new ArgumentException($"Private static field '{fieldName}' not found in type '{staticClassType.FullName}'. Ensure the field name is correct and it is indeed a static field.");
 
-			// 对于静态字段，GetValue 的第一个参数总是 null。
 			return (T)fieldInfo.GetValue(null);
 		}
 
@@ -1239,9 +1242,8 @@ namespace TShockAPI
 				throw new ArgumentNullException(nameof(fieldName), "Field name cannot be null or empty.");
 			}
 
-			FieldInfo fieldInfo = staticClassType.GetField(fieldName, BindingFlags.Static) ?? throw new ArgumentException($"Private static field '{fieldName}' not found in type '{staticClassType.FullName}'. Ensure the field name is correct and it is indeed a static field.");
+			FieldInfo fieldInfo = staticClassType.GetField(fieldName, BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) ?? throw new ArgumentException($"Private static field '{fieldName}' not found in type '{staticClassType.FullName}'. Ensure the field name is correct and it is indeed a static field.");
 
-			// 对于静态字段，SetValue 的第一个参数总是 null。
 			fieldInfo.SetValue(null, value);
 		}
 	}

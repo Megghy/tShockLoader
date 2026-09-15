@@ -1905,7 +1905,6 @@ namespace TShockAPI
 		public void SendFileTextAsMessage(string file)
 		{
 			string foo = "";
-			bool containsOldFormat = false;
 			using (var tr = new StreamReader(file))
 			{
 				Color lineColor;
@@ -2211,7 +2210,7 @@ namespace TShockAPI
 			if (RealPlayer && !ConnectionAlive)
 				return;
 
-			if (!NecessaryPacket(msgType) && !FinishedHandshake)
+			if (!FinishedHandshake && !NecessaryPacket(msgType) && !PacketTypesUtil.IsTmlProtocol(msgType))
 				return;
 
 			if (FakePlayer != null && FakePlayer.whoAmI != -1 && msgType == PacketTypes.WorldInfo && State < (int)ConnectionState.RequestingWorldData) //So.. the All player doesn't have a state, so we cannot check this, skip over them if their index is -1 (server/all)

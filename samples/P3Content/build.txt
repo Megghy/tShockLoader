@@ -1,0 +1,5 @@
+displayName = P3 Content Probe
+author = tShockLoader
+version = 0.1.0
+side = Both
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*

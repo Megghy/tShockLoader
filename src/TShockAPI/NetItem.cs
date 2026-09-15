@@ -17,11 +17,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 using Terraria;
+using Terraria.ModLoader;
+using Terraria.ModLoader.IO;
 
 namespace TShockAPI
 {
@@ -124,6 +123,7 @@ namespace TShockAPI
 		private int _prefixId;
 		[JsonProperty("stack")]
 		private int _stack;
+		TagCompound _tag;
 
 		/// <summary>
 		/// Gets the net ID.
@@ -160,32 +160,38 @@ namespace TShockAPI
 			_netId = netId;
 			_stack = stack;
 			_prefixId = prefixId;
+			_tag = null;
 		}
 
-		/// <summary>
-		/// Creates a new <see cref="NetItem"/>.
-		/// </summary>
-		/// <param name="item">Item in the game.</param>
 		public NetItem(Item item)
 		{
 			_netId = item.netID;
 			_stack = item.stack;
 			_prefixId = item.prefix;
+			_tag = item.IsAir ? null : ItemIO.Save(item);
 		}
 
-		/// <summary>
-		/// Creates <see cref="Terraria.Item"/> based on data from this structure.
-		/// </summary>
-		/// <returns>A copy of the item.</returns>
 		public Item ToItem()
 		{
-			Item item = new Item();
+			var item = new Item();
+			ApplyTo(item);
+			return item;
+		}
+
+		public void ApplyTo(Item item)
+		{
+			if (_tag is { Count: > 0 })
+			{
+				ItemIO.Load(item, _tag);
+				return;
+			}
 
 			item.netDefaults(_netId);
-			item.stack = _stack;
-			item.prefix = _prefixId;
-
-			return item;
+			if (item.netID != 0)
+			{
+				item.stack = _stack;
+				item.Prefix((byte)_prefixId);
+			}
 		}
 
 		/// <summary>
@@ -227,9 +233,7 @@ namespace TShockAPI
 		/// <returns></returns>
 		public static explicit operator NetItem(Item item)
 		{
-			return item == null
-				? new NetItem()
-				: new NetItem(item.netID, item.stack, item.prefix);
+			return item == null ? new NetItem() : new NetItem(item);
 		}
 	}
 }

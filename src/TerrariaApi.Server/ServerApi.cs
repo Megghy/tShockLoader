@@ -29,13 +29,14 @@ public static class ServerApi
     internal static bool IsBound => game is not null;
     internal static Func<string, Assembly?>? AdditionalAssemblyResolve { get; set; }
 
-    internal static void Bind(Main instance)
+    internal static void Bind(Main instance, string logFilePath)
     {
         if (game is not null)
             throw new InvalidOperationException("ServerApi session is already bound.");
 
         game = instance;
-        LogWriter = new LogWriterManager(enabled: true);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(logFilePath))!);
+        LogWriter = new LogWriterManager(enabled: true, logFilePath);
         AppDomain.CurrentDomain.AssemblyResolve += Resolve;
         LogWriter.ServerWriteLine($"TerrariaApi - Server v{ApiVersion} started.", TraceLevel.Info);
     }
@@ -48,14 +49,15 @@ public static class ServerApi
         AppDomain.CurrentDomain.AssemblyResolve -= Resolve;
         AdditionalAssemblyResolve = null;
         Profiler.Deatch();
-        LogWriter.Deatch();
+        LogWriter?.Deatch();
+        LogWriter = null!;
         game = null;
     }
 
     static Assembly? Resolve(object? sender, ResolveEventArgs args)
     {
         var name = new AssemblyName(args.Name).Name;
-        if (name is "OTAPI" or "OTAPI.Runtime" or "OTAPI.Upcoming" or "TerrariaServer" or "TerrariaApi.Server")
+        if (name is "OTAPI" or "OTAPI.Upcoming" or "TerrariaServer" or "TerrariaApi.Server")
             return typeof(ServerApi).Assembly;
 
         if (name is null)

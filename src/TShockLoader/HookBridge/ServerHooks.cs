@@ -1,13 +1,15 @@
-﻿using OTAPI;
-using System;
-using System.Linq;
+using System.Reflection;
+using MonoMod.RuntimeDetour;
+using OTAPI;
 using Terraria;
+using Terraria.ModLoader;
 
 namespace TerrariaApi.Server.Hooking;
 
 internal static class ServerHooks
 {
 	private static HookManager _hookManager;
+	static Hook? ExecuteCommandHook;
 
 	/// <summary>
 	/// Attaches any of the OTAPI Server hooks to the existing <see cref="HookManager"/> implementation
@@ -19,9 +21,31 @@ internal static class ServerHooks
 
 		//HookEvents.Terraria.Main.startDedInput += Main_startDedInput;
 		On_Main.startDedInput += Main_startDedInput;
-		//HookEvents.Terraria.RemoteClient.Reset += RemoteClient_Reset;
 		On_RemoteClient.Reset += RemoteClient_Reset;
+		ExecuteCommandHook = new Hook(
+			HookMethods.Require(typeof(Main), nameof(Main.ExecuteCommand), BindingFlags.Static | BindingFlags.Public, typeof(string), typeof(CommandCaller)),
+			HookMethods.Require(typeof(ServerHooks), nameof(OnExecuteCommand), BindingFlags.Static | BindingFlags.NonPublic));
 		Hooks.Main.CommandProcess += OnProcess;
+	}
+
+	public static void Detach()
+	{
+		On_Main.startDedInput -= Main_startDedInput;
+		On_RemoteClient.Reset -= RemoteClient_Reset;
+		ExecuteCommandHook?.Dispose();
+		ExecuteCommandHook = null;
+		Hooks.Main.CommandProcess -= OnProcess;
+	}
+
+	delegate void orig_ExecuteCommand(string text, CommandCaller commandCaller);
+
+	static void OnExecuteCommand(orig_ExecuteCommand orig, string text, CommandCaller commandCaller)
+	{
+		if (commandCaller.CommandType == CommandType.Console
+		    && !Hooks.Main.InvokeCommandProcess(text.ToLowerInvariant(), text))
+			return;
+
+		orig(text, commandCaller);
 	}
 
 	static void Main_startDedInput(On_Main.orig_startDedInput orig)

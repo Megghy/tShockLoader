@@ -145,5 +145,17 @@ public enum PacketTypes
 	SyncItemsWithShimmer = 145,
 	ShimmerActions = 146,
 	SyncLoadout = 147,
-	SyncItemCannotBeTakenByEnemies = 148
+	SyncItemCannotBeTakenByEnemies = 148,
+	InGameChangeConfig = 249,
+	ModPacket = 250,
+	SyncMods = 251,
+	ModFile = 252,
+	KeepAliveDuringModReload = 253
+}
+
+public static class PacketTypesUtil
+{
+	public static bool IsTmlProtocol(byte packetId) => packetId >= (byte)PacketTypes.InGameChangeConfig;
+
+	public static bool IsTmlProtocol(PacketTypes type) => IsTmlProtocol((byte)type);
 }

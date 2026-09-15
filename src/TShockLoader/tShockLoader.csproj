@@ -26,8 +26,8 @@
       <_PackedLib Include="$(TargetDir)Npgsql.dll" />
       <_PackedLib Include="$(TargetDir)ReflectionMagic.dll" />
       <_PackedLib Include="$(TargetDir)System.Data.SQLite.dll" />
-      <_PackedLib Include="$(TargetDir)SQLite.Interop.dll" Condition="Exists('$(TargetDir)SQLite.Interop.dll')" />
     </ItemGroup>
     <Copy SourceFiles="@(_PackedLib)" DestinationFolder="$(ProjectDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)..\TShockAPI\lib\SQLite.Interop.dll" DestinationFolder="$(ProjectDir)native" />
   </Target>
 </Project>

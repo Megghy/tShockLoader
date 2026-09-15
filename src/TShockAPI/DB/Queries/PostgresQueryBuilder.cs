@@ -41,6 +41,7 @@ public class PostgresQueryBuilder : GenericQueryBuilder
 		MySqlDbType.Double => "DOUBLE PRECISION",
 		MySqlDbType.Int32 => "INT",
 		MySqlDbType.Int64 => "BIGINT",
+		MySqlDbType.Blob => "BYTEA",
 		MySqlDbType.DateTime => "TIMESTAMP",
 
 		_ => throw new NotImplementedException(Enum.GetName(typeof(MySqlDbType), type))

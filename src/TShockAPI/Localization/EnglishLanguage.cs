@@ -19,7 +19,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Terraria;
+using Terraria.Chat;
+using Terraria.ID;
 using Terraria.Initializers;
 using Terraria.Localization;
 using Terraria.UI.Chat;
@@ -43,56 +46,73 @@ namespace TShockAPI.Localization
 
 		internal static void Initialize()
 		{
-			var culture = Language.ActiveCulture;
+			CaptureVanillaCommands();
+		}
 
-			var skip = culture == GameCulture.FromCultureName(GameCulture.CultureName.English);
-
-			try
+		public static void RebuildContentNames()
+		{
+			WithEnglishCulture(() =>
 			{
-				if (!skip)
-				{
-					LanguageManager.Instance.SetLanguage(GameCulture.FromCultureName(GameCulture.CultureName.English));
-				}
+				ItemNames.Clear();
+				NpcNames.Clear();
+				Prefixs.Clear();
+				Buffs.Clear();
 
-				for (var i = -48; i < Terraria.ID.ItemID.Count; i++)
-				{
-					ItemNames.Add(i, Lang.GetItemNameValue(i));
-				}
+				for (var i = -48; i < ContentIds.Items; i++)
+					ItemNames[i] = Lang.GetItemNameValue(i) ?? string.Empty;
 
-				for (var i = -17; i < Terraria.ID.NPCID.Count; i++)
-				{
-					NpcNames.Add(i, Lang.GetNPCNameValue(i));
-				}
+				for (var i = -17; i < ContentIds.Npcs; i++)
+					NpcNames[i] = Lang.GetNPCNameValue(i) ?? string.Empty;
 
-				for (var i = 0; i < Terraria.ID.BuffID.Count; i++)
-				{
-					Buffs.Add(i, Lang.GetBuffName(i));
-				}
+				for (var i = 0; i < ContentIds.Buffs; i++)
+					Buffs[i] = Lang.GetBuffName(i) ?? string.Empty;
 
-				foreach (var field in typeof(Main).Assembly.GetType("Terraria.ID.PrefixID")
-							.GetFields().Where(f => !f.Name.Equals("Count", StringComparison.Ordinal)))
+				var prefixCount = Math.Min(ContentIds.Prefixes, Lang.prefix.Length);
+				for (var i = 0; i < prefixCount; i++)
 				{
-					var i = (int)field.GetValue(null);
-					Prefixs.Add(i, Lang.prefix[i].Value);
+					var text = Lang.prefix[i];
+					if (text is not null)
+						Prefixs[i] = text.Value;
 				}
+			});
+		}
 
-				ChatInitializer.Load();
-				dynamic commands = ChatManager.Commands.AsDynamic();
-				foreach (var command in commands._localizedCommands)
+		static void CaptureVanillaCommands()
+		{
+			WithEnglishCulture(() =>
+			{
+				var localizedField = typeof(ChatCommandProcessor).GetField("_localizedCommands", BindingFlags.Instance | BindingFlags.NonPublic)
+					?? throw new MissingFieldException(typeof(ChatCommandProcessor).FullName, "_localizedCommands");
+				var localized = (Dictionary<LocalizedText, ChatCommandId>)localizedField.GetValue(ChatManager.Commands)!;
+				var nameField = typeof(ChatCommandId).GetField("_name", BindingFlags.Instance | BindingFlags.NonPublic)
+					?? throw new MissingFieldException(typeof(ChatCommandId).FullName, "_name");
+				if (localized.Count == 0)
+					ChatInitializer.Load();
+				foreach (var command in localized)
 				{
-					string name = command.Value.AsDynamic()._name;
+					var name = (string)nameField.GetValue(command.Value)!;
 					if (VanillaCommandsPrefixs.ContainsKey(name))
 						continue;
 					VanillaCommandsPrefixs.Add(name, command.Key.Value);
 				}
-				commands._localizedCommands.Clear();
+				localized.Clear();
+			});
+		}
+
+		static void WithEnglishCulture(Action action)
+		{
+			var culture = Language.ActiveCulture;
+			var skip = culture == GameCulture.FromCultureName(GameCulture.CultureName.English);
+			try
+			{
+				if (!skip)
+					LanguageManager.Instance.SetLanguage(GameCulture.FromCultureName(GameCulture.CultureName.English));
+				action();
 			}
 			finally
 			{
 				if (!skip)
-				{
 					LanguageManager.Instance.SetLanguage(culture);
-				}
 			}
 		}
 

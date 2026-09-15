@@ -1,0 +1,17 @@
+Mods: {
+	P3Content: {
+		Items: {
+			P3ProbeItem: {
+				DisplayName: P3 Probe Item
+				Tooltip: Dynamic content probe
+			}
+		}
+	}
+}
+
+Items: {
+	P3ProbeItem: {
+		DisplayName: P3 Probe Item
+		Tooltip: ""
+	}
+}

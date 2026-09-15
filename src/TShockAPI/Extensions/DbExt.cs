@@ -240,6 +240,10 @@ namespace TShockAPI.DB
 				(s, i) => s.IsDBNull(i) ? null : (object)s.GetDateTime(i)
 			},
 			{
+				typeof (byte[]),
+				(s, i) => (byte[])s.GetValue(i)
+			},
+			{
 				typeof (object),
 				(s, i) => s.GetValue(i)
 			},

@@ -1283,7 +1283,7 @@ namespace TShockAPI
 				if (account != null)
 				{
 					DateTime LastSeen;
-					string Timezone = TimeZone.CurrentTimeZone.GetUtcOffset(DateTime.Now).Hours.ToString("+#;-#");
+					string Timezone = TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).Hours.ToString("+#;-#");
 
 					if (DateTime.TryParse(account.LastAccessed, out LastSeen))
 					{
@@ -2058,7 +2058,7 @@ namespace TShockAPI
 			args.Player.SendInfoMessage(GetString("An update check has been queued. If an update is available, you will be notified shortly."));
 			try
 			{
-				TShock.UpdateManager.UpdateCheckAsync(null);
+				_ = TShock.UpdateManager.UpdateCheckAsync(null);
 			}
 			catch (Exception)
 			{
@@ -2872,7 +2872,7 @@ namespace TShockAPI
 			else
 			{
 				var npc = npcs[0];
-				if (npc.type >= NPCID.BlueSlime && npc.type < Terraria.ID.NPCID.Count && npc.type != NPCID.WallofFlesh)
+				if (npc.type >= NPCID.BlueSlime && npc.type < ContentIds.Npcs && npc.type != NPCID.WallofFlesh)
 				{
 					TSPlayer.Server.SpawnNPC(npc.netID, npc.FullName, amount, args.Player.TileX, args.Player.TileY, 50, 20);
 					if (args.Silent)
@@ -4037,7 +4037,7 @@ namespace TShockAPI
 							return;
 						}
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < Terraria.ID.ProjectileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < ContentIds.Projectiles)
 						{
 							TShock.ProjectileBans.AddNewBan(id);
 							args.Player.SendSuccessMessage(GetString("Banned projectile {0}.", id));
@@ -4057,7 +4057,7 @@ namespace TShockAPI
 						}
 
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < Terraria.ID.ProjectileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < ContentIds.Projectiles)
 						{
 							if (!TShock.Groups.GroupExists(args.Parameters[2]))
 							{
@@ -4094,7 +4094,7 @@ namespace TShockAPI
 						}
 
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < Terraria.ID.ProjectileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < ContentIds.Projectiles)
 						{
 							TShock.ProjectileBans.RemoveBan(id);
 							args.Player.SendSuccessMessage(GetString("Unbanned projectile {0}.", id));
@@ -4115,7 +4115,7 @@ namespace TShockAPI
 						}
 
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < Terraria.ID.ProjectileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id > 0 && id < ContentIds.Projectiles)
 						{
 							if (!TShock.Groups.GroupExists(args.Parameters[2]))
 							{
@@ -4213,7 +4213,7 @@ namespace TShockAPI
 							return;
 						}
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < Terraria.ID.TileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < ContentIds.Tiles)
 						{
 							TShock.TileBans.AddNewBan(id);
 							args.Player.SendSuccessMessage(GetString("Banned tile {0}.", id));
@@ -4233,7 +4233,7 @@ namespace TShockAPI
 						}
 
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < Terraria.ID.TileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < ContentIds.Tiles)
 						{
 							if (!TShock.Groups.GroupExists(args.Parameters[2]))
 							{
@@ -4270,7 +4270,7 @@ namespace TShockAPI
 						}
 
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < Terraria.ID.TileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < ContentIds.Tiles)
 						{
 							TShock.TileBans.RemoveBan(id);
 							args.Player.SendSuccessMessage(GetString("Unbanned tile {0}.", id));
@@ -4291,7 +4291,7 @@ namespace TShockAPI
 						}
 
 						short id;
-						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < Terraria.ID.TileID.Count)
+						if (Int16.TryParse(args.Parameters[1], out id) && id >= 0 && id < ContentIds.Tiles)
 						{
 							if (!TShock.Groups.GroupExists(args.Parameters[2]))
 							{
@@ -6103,7 +6103,7 @@ namespace TShockAPI
 			{
 				item = matchedItems[0];
 			}
-			if (item.type < ItemID.IronPickaxe && item.type >= Terraria.ID.ItemID.Count)
+			if (item.type < ItemID.IronPickaxe && item.type >= ContentIds.Items)
 			{
 				args.Player.SendErrorMessage(GetString("The item type {0} is invalid.", itemNameOrId));
 				return;
@@ -6266,7 +6266,7 @@ namespace TShockAPI
 						prefix = prefixIds[0];
 				}
 
-				if (item.type >= ItemID.IronPickaxe && item.type < Terraria.ID.ItemID.Count)
+				if (item.type >= ItemID.IronPickaxe && item.type < ContentIds.Items)
 				{
 					var players = TSPlayer.FindByNameOrID(plStr);
 					if (players.Count == 0)
@@ -6408,7 +6408,7 @@ namespace TShockAPI
 			if (args.Parameters.Count == 2)
 				int.TryParse(args.Parameters[1], out time);
 
-			if (id > 0 && id < Terraria.ID.BuffID.Count)
+			if (id > 0 && id < ContentIds.Buffs)
 			{
 				// Max possible buff duration as of Terraria 1.4.2.3 is 35791393 seconds (415 days).
 				if (time < 0 || time > timeLimit)
@@ -6464,7 +6464,7 @@ namespace TShockAPI
 				}
 				if (args.Parameters.Count == 3)
 					int.TryParse(args.Parameters[2], out time);
-				if (id > 0 && id < Terraria.ID.BuffID.Count)
+				if (id > 0 && id < ContentIds.Buffs)
 				{
 					var target = foundplr[0];
 					if (time < 0 || time > timeLimit)

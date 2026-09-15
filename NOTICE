@@ -1,0 +1,36 @@
+tShockLoader bundles the following components inside tShockLoader.tmod.
+
+TShockAPI 5.2.3
+  Copyright (C) Pryaxis & TShock Contributors
+  GNU GPL v3
+  https://github.com/Pryaxis/TShock
+
+TerrariaApi.Server (ApiVersion 2.1)
+  Copyright (C) Pryaxis & TShock Contributors
+  GNU GPL v3
+  https://github.com/Pryaxis/Terraria-Server-API
+
+BCrypt.Net-Next
+  src/TShockAPI/lib/BCrypt.Net-Next.dll
+
+GetText
+  src/TShockAPI/lib/GetText.dll
+
+HttpServer
+  src/TShockAPI/lib/HttpServer.dll
+
+MySqlConnector
+  src/TShockAPI/lib/MySqlConnector.dll
+
+Npgsql
+  src/TShockAPI/lib/Npgsql.dll
+
+ReflectionMagic
+  src/TShockAPI/lib/ReflectionMagic.dll
+
+System.Data.SQLite and SQLite.Interop
+  src/TShockAPI/lib/System.Data.SQLite.dll
+  src/TShockAPI/lib/SQLite.Interop.dll
+
+tModLoader, FNA, and Terraria remain separate products and are not
+redistributed by this package. Install tModLoader independently.

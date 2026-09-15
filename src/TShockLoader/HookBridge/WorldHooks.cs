@@ -19,7 +19,9 @@ internal static class WorldHooks
 		_hookManager = hookManager;
 
 		//HookEvents.Terraria.IO.WorldFile.SaveWorld_Boolean_Boolean += WorldFile_SaveWorld;
-		SaveWorldHook = new Hook(typeof(WorldGen).GetMethod("SaveWorld", BindingFlags.Static | BindingFlags.Public), typeof(WorldHooks).GetMethod("WorldFile_SaveWorld", BindingFlags.Static | BindingFlags.NonPublic));
+		SaveWorldHook = new Hook(
+			HookMethods.Require(typeof(Terraria.IO.WorldFile), "SaveWorld", BindingFlags.Static | BindingFlags.Public, typeof(bool), typeof(bool)),
+			HookMethods.Require(typeof(WorldHooks), nameof(WorldFile_SaveWorld), BindingFlags.Static | BindingFlags.NonPublic));
 		//HookEvents.Terraria.WorldGen.StartHardmode += WorldGen_StartHardmode;
 		On_WorldGen.StartHardmode += WorldGen_StartHardmode;
 		//Terraria.WorldGen.SpreadGrass += WorldGen_SpreadGrass;
@@ -31,6 +33,18 @@ internal static class WorldHooks
 
 		Hooks.Collision.PressurePlate += OnPressurePlate;
 		Hooks.WorldGen.Meteor += OnDropMeteor;
+	}
+
+	public static void Detach()
+	{
+		SaveWorldHook?.Dispose();
+		SaveWorldHook = null;
+		On_WorldGen.StartHardmode -= WorldGen_StartHardmode;
+		On_WorldGen.SpreadGrass -= WorldGen_SpreadGrass;
+		On_Main.checkXMas -= Main_checkXMas;
+		On_Main.checkHalloween -= Main_checkHalloween;
+		Hooks.Collision.PressurePlate -= OnPressurePlate;
+		Hooks.WorldGen.Meteor -= OnDropMeteor;
 	}
 
 	static void OnPressurePlate(object sender, Hooks.Collision.PressurePlateEventArgs e)

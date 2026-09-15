@@ -34,6 +34,19 @@ internal static class NpcHooks
 		Hooks.NPC.Killed += OnKilled;
 	}
 
+	public static void Detach()
+	{
+		On_NPC.SetDefaults -= OnSetDefaultsById;
+		On_NPC.SetDefaultsFromNetId -= OnSetDefaultsFromNetId;
+		On_NPC.StrikeNPC_HitInfo_bool_bool -= OnStrike;
+		On_NPC.Transform -= OnTransform;
+		On_NPC.AI -= OnAI;
+		Hooks.NPC.Spawn -= OnSpawn;
+		Hooks.NPC.DropLoot -= OnDropLoot;
+		Hooks.NPC.BossBag -= OnBossBagItem;
+		Hooks.NPC.Killed -= OnKilled;
+	}
+
 	static void OnKilled(object sender, Hooks.NPC.KilledEventArgs e)
 	{
 		_hookManager.InvokeNpcKilled(e.Npc);
@@ -58,14 +71,13 @@ internal static class NpcHooks
 		var hitDirection = hitInfo.HitDirection;
 		var crit = hitInfo.Crit;
 		if (_hookManager.InvokeNpcStrike(self, ref damage, ref knockback, ref hitDirection, ref crit, ref noPlayerInteraction, ref fromNet, null))
-		{
-			hitInfo.Damage = damage;
-			hitInfo.Knockback = knockback;
-			hitInfo.HitDirection = hitDirection;
-			hitInfo.Crit = crit;
-			orig(self, hitInfo, fromNet, noPlayerInteraction);
-		}
-		return damage;
+			return 0;
+
+		hitInfo.Damage = damage;
+		hitInfo.Knockback = knockback;
+		hitInfo.HitDirection = hitDirection;
+		hitInfo.Crit = crit;
+		return orig(self, hitInfo, fromNet, noPlayerInteraction);
 	}
 
 	static void OnTransform(On_NPC.orig_Transform orig, NPC self, int newType)

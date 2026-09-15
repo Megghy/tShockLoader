@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.Loader;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
@@ -20,6 +21,7 @@ static class PluginLoader
     ];
 
     static readonly Dictionary<string, Assembly> loadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
+    static readonly List<PluginContainer> initializedOrder = [];
 
     internal static void Load(Main game)
     {
@@ -27,6 +29,8 @@ static class PluginLoader
         loadedAssemblies["TerrariaApi.Server"] = typeof(ServerApi).Assembly;
         loadedAssemblies["tShockLoader"] = typeof(PluginLoader).Assembly;
         ServerApi.AdditionalAssemblyResolve = ResolveLoaded;
+        HostContext.Resolving -= ResolveHost;
+        HostContext.Resolving += ResolveHost;
 
         var pluginRoot = ServerApi.ServerPluginsDirectoryPath;
         RejectCoreCopies(pluginRoot);
@@ -42,6 +46,7 @@ static class PluginLoader
             : [];
 
         var initWatches = new Dictionary<TerrariaPlugin, Stopwatch> { [tshock] = new() };
+        var pending = new List<(string Path, byte[] Pe, string Id)>();
 
         foreach (var file in EnumeratePluginFiles(pluginRoot))
         {
@@ -52,47 +57,87 @@ static class PluginLoader
                 continue;
             }
 
-            LoadPluginAssembly(file.FullName, game, initWatches);
-        }
-
-        foreach (var container in ServerApi.Plugins
-                     .OrderBy(p => p.Plugin.Order)
-                     .ThenBy(p => p.Plugin.Name, StringComparer.Ordinal)
-                     .ThenBy(p => p.Plugin.GetType().FullName, StringComparer.Ordinal)
-                     .ThenBy(p => p.Plugin.GetType().Assembly.GetName().Name, StringComparer.Ordinal))
-        {
-            var watch = initWatches[container.Plugin];
-            watch.Start();
+            byte[] pe;
             try
             {
-                container.Initialize();
+                pe = RelinkPluginFile(file.FullName);
             }
-            catch (Exception ex)
+            catch (BadImageFormatException)
             {
-                throw new InvalidOperationException(
-                    $"Plugin \"{container.Plugin.Name}\" has thrown an exception during initialization.", ex);
+                continue;
+            }
+            catch (RelinkUnsupportedException ex)
+            {
+                ServerApi.LogWriter.ServerWriteLine($"{id} skipped: {ex.Message}", TraceLevel.Error);
+                continue;
             }
 
-            watch.Stop();
-            ServerApi.LogWriter.ServerWriteLine(
-                $"Plugin {container.Plugin.Name} v{container.Plugin.Version} by {container.Plugin.Author} initiated ({watch.Elapsed.TotalMilliseconds:0}ms) source={container.Source}",
-                TraceLevel.Info);
+            pending.Add((file.FullName, pe, id));
         }
+
+        OtapiRuntime.Install();
+        if (OtapiRuntime.Assembly is not null)
+            loadedAssemblies["OTAPI.Runtime"] = OtapiRuntime.Assembly;
+
+        foreach (var item in pending)
+            LoadPluginAssembly(item.Pe, item.Id, game, initWatches);
+
+        var sequence = ServerApi.Plugins
+            .OrderBy(p => p.Plugin.Order)
+            .ThenBy(p => p.Plugin.Name, StringComparer.Ordinal)
+            .ThenBy(p => p.Plugin.GetType().FullName, StringComparer.Ordinal)
+            .ThenBy(p => p.Plugin.GetType().Assembly.GetName().Name, StringComparer.Ordinal)
+            .ToList();
+        ServerApi.LogWriter.ServerWriteLine(
+            $"init-order {string.Join(",", sequence.Select(p => $"{p.Plugin.Name}:{p.Plugin.Order}"))}",
+            TraceLevel.Info);
+
+        foreach (var container in sequence)
+            InitializePlugin(container, initWatches[container.Plugin]);
+    }
+
+    static void InitializePlugin(PluginContainer container, Stopwatch watch)
+    {
+        watch.Start();
+        try
+        {
+            container.Initialize();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Plugin \"{container.Plugin.Name}\" has thrown an exception during initialization.", ex);
+        }
+
+        watch.Stop();
+        initializedOrder.Add(container);
+        ServerApi.LogWriter.ServerWriteLine(
+            $"Plugin {container.Plugin.Name} v{container.Plugin.Version} by {container.Plugin.Author} initiated ({watch.Elapsed.TotalMilliseconds:0}ms) source={container.Source}",
+            TraceLevel.Info);
     }
 
     internal static void Unload()
     {
-        var initialized = ServerApi.Plugins.Where(p => p.Initialized).Reverse().ToList();
-        var tshock = initialized.Where(p => p.Source == "Core").ToList();
-        var thirdParty = initialized.Where(p => p.Source != "Core").ToList();
+        var plugins = ServerApi.Plugins.ToList();
+        var thirdInited = initializedOrder.Where(p => p.Source != "Core").Reverse();
+        var thirdRest = plugins.Where(p => p.Source != "Core" && !initializedOrder.Contains(p)).Reverse();
+        var core = plugins.Where(p => p.Source == "Core");
+        var order = thirdInited.Concat(thirdRest).Concat(core).ToList();
+        ServerApi.LogWriter.ServerWriteLine(
+            $"dispose-order {string.Join(",", order.Select(p => p.Plugin.Name))}",
+            TraceLevel.Info);
 
-        DisposeAll(thirdParty);
-        DisposeAll(tshock);
+        var first = DisposeAll(order);
+        OtapiRuntimeBinder.DisposeAll();
+        initializedOrder.Clear();
         loadedAssemblies.Clear();
+        if (first is not null)
+            throw first;
     }
 
-    static void DisposeAll(IEnumerable<PluginContainer> containers)
+    static Exception? DisposeAll(IEnumerable<PluginContainer> containers)
     {
+        Exception? first = null;
         foreach (var container in containers)
         {
             try
@@ -102,11 +147,14 @@ static class PluginLoader
             }
             catch (Exception ex)
             {
+                first ??= ex;
                 ServerApi.LogWriter.ServerWriteLine(
                     $"Plugin \"{container.Plugin.Name}\" has thrown an exception during disposal:\n{ex}",
                     TraceLevel.Error);
             }
         }
+
+        return first;
     }
 
     static void RejectCoreCopies(string pluginRoot)
@@ -133,32 +181,54 @@ static class PluginLoader
             .OrderBy(f => f.Name, StringComparer.Ordinal);
     }
 
-    static void LoadPluginAssembly(string path, Main game, Dictionary<TerrariaPlugin, Stopwatch> initWatches)
+    static void LoadPluginAssembly(byte[] pe, string id, Main game, Dictionary<TerrariaPlugin, Stopwatch> initWatches)
     {
-        var id = Path.GetFileNameWithoutExtension(path);
         if (!loadedAssemblies.TryGetValue(id, out var assembly))
         {
-            try
-            {
-                assembly = LoadPluginFile(path);
-            }
-            catch (BadImageFormatException)
-            {
-                return;
-            }
-
+            using var stream = new MemoryStream(pe, writable: false);
+            assembly = HostContext.LoadFromStream(stream);
             loadedAssemblies[id] = assembly;
         }
 
         CollectPlugins(assembly, game, initWatches);
     }
 
-    static Assembly LoadPluginFile(string path)
+    static byte[] RelinkPluginFile(string path)
     {
         var pe = File.ReadAllBytes(path);
-        if (PluginRelinker.NeedsRelink(pe))
-            pe = PluginRelinker.Relink(pe);
-        return Assembly.Load(pe);
+        var id = Path.GetFileNameWithoutExtension(path);
+        if (!PluginRelinker.NeedsRelink(pe))
+            return pe;
+
+        pe = PluginRelinker.Relink(pe, id);
+        ServerApi.LogWriter.ServerWriteLine($"relink {id}", TraceLevel.Info);
+        return pe;
+    }
+
+    static readonly AssemblyLoadContext HostContext =
+        AssemblyLoadContext.GetLoadContext(typeof(PluginLoader).Assembly)
+        ?? throw new InvalidOperationException("tShockLoader assembly has no load context.");
+
+    static Assembly? ResolveHost(AssemblyLoadContext context, AssemblyName identity)
+    {
+        var name = identity.Name;
+        if (string.IsNullOrEmpty(name))
+            return null;
+
+        foreach (var asm in context.Assemblies)
+        {
+            if (string.Equals(asm.GetName().Name, name, StringComparison.OrdinalIgnoreCase))
+                return asm;
+        }
+
+        if (name is "OTAPI.Runtime")
+            return OtapiRuntime.Assembly;
+        if (name is "TerrariaServer")
+            return typeof(ServerApi).Assembly;
+        if (name is "Terraria")
+            return typeof(Main).Assembly;
+
+        return ResolveLoaded(name);
     }
 
     static void CollectPlugins(Assembly assembly, Main game, Dictionary<TerrariaPlugin, Stopwatch> initWatches)
@@ -204,6 +274,14 @@ static class PluginLoader
         if (loadedAssemblies.TryGetValue(name, out var loaded))
             return loaded;
 
+        foreach (var asm in HostContext.Assemblies)
+        {
+            if (!string.Equals(asm.GetName().Name, name, StringComparison.OrdinalIgnoreCase))
+                continue;
+            loadedAssemblies[name] = asm;
+            return asm;
+        }
+
         var candidate = Path.Combine(ServerApi.ServerPluginsDirectoryPath, name + ".dll");
         if (!File.Exists(candidate))
             return null;
@@ -212,7 +290,9 @@ static class PluginLoader
         if (CoreAssemblyNames.Contains(id, StringComparer.OrdinalIgnoreCase))
             throw new InvalidOperationException($"Core assembly copy found at {candidate}.");
 
-        var assembly = LoadPluginFile(candidate);
+        var pe = RelinkPluginFile(candidate);
+        using var stream = new MemoryStream(pe, writable: false);
+        var assembly = HostContext.LoadFromStream(stream);
         loadedAssemblies[name] = assembly;
         return assembly;
     }

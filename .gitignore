@@ -1,3 +1,4 @@
+dev-docs/
 bin/
 obj/
 .vs/
@@ -7,3 +8,4 @@ obj/
 src/TShockLoader/*.dll
 src/TShockLoader/*.pdb
 src/TShockLoader/*.xml
+src/TShockLoader/native/

@@ -16,7 +16,11 @@ namespace TerrariaApi.Server
 		public ServerLogWriter(string logFilePath = "ServerLog.txt") {
 			try
 			{
-				this.LogFileWriter = new StreamWriter(logFilePath, true);
+				var fullPath = Path.GetFullPath(logFilePath);
+				var directory = Path.GetDirectoryName(fullPath);
+				if (!string.IsNullOrEmpty(directory))
+					Directory.CreateDirectory(directory);
+				this.LogFileWriter = new StreamWriter(new FileStream(fullPath, FileMode.Append, FileAccess.Write, FileShare.Read));
 			}
 			catch (Exception ex)
 			{

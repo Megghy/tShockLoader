@@ -20,6 +20,12 @@ internal static class ProjectileHooks
 		On_Projectile.AI += OnAI;
 	}
 
+	public static void Detach()
+	{
+		On_Projectile.SetDefaults -= OnSetDefaults;
+		On_Projectile.AI -= OnAI;
+	}
+
 	private static void OnSetDefaults(On_Projectile.orig_SetDefaults orig, Projectile self, int Type)
 	{
 		orig(self, Type);
@@ -28,7 +34,7 @@ internal static class ProjectileHooks
 
 	private static void OnAI(On_Projectile.orig_AI orig, Projectile self)
 	{
-		if (_hookManager.InvokeProjectileAIUpdate(self))
+		if (!_hookManager.InvokeProjectileAIUpdate(self))
 			orig(self);
 	}
 }

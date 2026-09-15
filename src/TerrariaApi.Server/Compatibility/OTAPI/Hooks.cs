@@ -384,7 +384,7 @@ namespace OTAPI
                 return e.Result != HookResult.Cancel;
             }
 
-            public static bool InvokeHardmodeTilePlace(int x, int y, int type, bool mute, bool forced, int plr, int style)
+            public static HardmodeTileUpdateResult InvokeHardmodeTilePlace(int x, int y, int type, bool mute, bool forced, int plr, int style)
             {
                 HardmodeTilePlaceEventArgs e = new HardmodeTilePlaceEventArgs
                 {
@@ -398,15 +398,7 @@ namespace OTAPI
                     Result = HardmodeTileUpdateResult.Continue
                 };
                 WorldGen.HardmodeTilePlace?.Invoke(null, e);
-                if (e.Result == HardmodeTileUpdateResult.Cancel)
-                {
-                    return false;
-                }
-                if (e.Result == HardmodeTileUpdateResult.Continue)
-                {
-                    Terraria.WorldGen.PlaceTile(e.X, e.Y, e.Type, e.Mute, e.Forced, e.Plr, e.Style);
-                }
-                return true;
+                return e.Result ?? HardmodeTileUpdateResult.Continue;
             }
 
             public static bool InvokeHardmodeTileUpdate(int x, int y, ushort type)
@@ -728,7 +720,7 @@ namespace OTAPI
                 length = e.Length;
                 messageType = e.MessageType;
                 maxPackets = e.MaxPackets;
-                return e.Result != HookResult.Cancel && packetId < maxPackets;
+                return e.Result != HookResult.Cancel;
             }
 
             public static bool InvokeNameCollision(Player player)

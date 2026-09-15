@@ -38,7 +38,7 @@ namespace TerrariaApi.Server
 			get { return this.gameUpdate; }
 		}
 
-		private bool currentGameMenuState;
+		private bool currentGameMenuState = true;
 		internal void InvokeGameUpdate()
 		{
 			if (this.currentGameMenuState != Main.gameMenu)
@@ -379,11 +379,16 @@ namespace TerrariaApi.Server
 					return true;
 				}
 
+				// TML owns 249-253 (InGameChangeConfig / ModPacket / SyncMods / ModFile / KeepAlive).
+				// Vanilla TSAPI length caps and NetGetData handlers must not cancel or truncate them.
+				if (PacketTypesUtil.IsTmlProtocol(msgId))
+					return false;
+
 				// A critical server crash/corruption bug was reported by @bartico6 on GitHub.
 				// If a packet length comes in at extreme values, the server can enter infinite loops, deadlock, and corrupt the world.
 				// As a result, we take the following action: disconnect the player and log the attempt as soon as we can.
 				// The length 1000 was chosen as an arbitrarily large number for all packets. It may need to be tuned later.
-					if (length > 1000)
+				if (length > 1000)
 				{
 					NetMessage.BootPlayer(buffer.whoAmI, NetworkText.FromLiteral("Disconnected"));
 					return true;

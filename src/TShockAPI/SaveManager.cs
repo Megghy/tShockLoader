@@ -37,12 +37,10 @@ namespace TShockAPI
 		}
 		public static SaveManager Instance { get { return instance; } }
 
-		// Producer Consumer
-		private EventWaitHandle _wh = new AutoResetEvent(false);
-		private Object _saveLock = new Object();
-		private Queue<SaveTask> _saveQueue = new Queue<SaveTask>();
-		private Thread _saveThread;
-		private int saveQueueCount { get { lock (_saveLock) return _saveQueue.Count; } }
+		private readonly object _saveLock = new();
+		private readonly Queue<SaveTask> _saveQueue = new();
+		private readonly Thread _saveThread;
+		private int _pending;
 
 		/// <summary>
 		/// SaveWorld event handler which notifies users that the server may lag
@@ -77,12 +75,10 @@ namespace TShockAPI
 			if (!wait)
 				return;
 
-			// Wait for all outstanding saves to complete
-			int count = saveQueueCount;
-			while (0 != count)
+			lock (_saveLock)
 			{
-				Thread.Sleep(50);
-				count = saveQueueCount;
+				while (_pending > 0)
+					Monitor.Wait(_saveLock);
 			}
 		}
 
@@ -93,7 +89,6 @@ namespace TShockAPI
 		{
 			EnqueueTask(null);
 			_saveThread.Join();
-			_wh.Close();
 		}
 
 		private void EnqueueTask(SaveTask task)
@@ -101,50 +96,54 @@ namespace TShockAPI
 			lock (_saveLock)
 			{
 				_saveQueue.Enqueue(task);
+				if (task is not null)
+					_pending++;
+				Monitor.Pulse(_saveLock);
 			}
-			_wh.Set();
 		}
 
 		private void SaveWorker()
 		{
 			while (true)
 			{
+				SaveTask task;
 				lock (_saveLock)
 				{
-					// NOTE: lock for the entire process so wait works in SaveWorld
-					if (_saveQueue.Count > 0)
+					while (_saveQueue.Count == 0)
+						Monitor.Wait(_saveLock);
+					task = _saveQueue.Dequeue();
+				}
+				if (task is null)
+					return;
+
+				try
+				{
+					if (task.direct)
 					{
-						SaveTask task = _saveQueue.Dequeue();
-						if (null == task)
-							return;
-						else
-						{
-							// Ensure that save handler errors don't bubble up and cause a recursive call
-							// These can be caused by an unexpected error such as a bad or out of date plugin
-							try
-							{
-								if (task.direct)
-								{
-									OnSaveWorld(new WorldSaveEventArgs());
-									WorldFile.SaveWorld(task.resetTime);
-								}
-								else
-									WorldFile.SaveWorld(task.resetTime);
+						OnSaveWorld(new WorldSaveEventArgs());
+						WorldFile.SaveWorld(task.resetTime);
+					}
+					else
+						WorldFile.SaveWorld(task.resetTime);
 
-								if (TShock.Config.Settings.AnnounceSave)
-									TShock.Utils.Broadcast(GetString("World saved."), Color.Yellow);
+					if (TShock.Config.Settings.AnnounceSave)
+						TShock.Utils.Broadcast(GetString("World saved."), Color.Yellow);
 
-								TShock.Log.Info(GetString("World saved at ({0})", Main.worldPathName));
-							}
-							catch (Exception e)
-							{
-								TShock.Log.Error("World saved failed");
-								TShock.Log.Error(e.ToString());
-							}
-						}
+					TShock.Log.Info(GetString("World saved at ({0})", Main.worldPathName));
+				}
+				catch (Exception e)
+				{
+					TShock.Log.Error("World saved failed");
+					TShock.Log.Error(e.ToString());
+				}
+				finally
+				{
+					lock (_saveLock)
+					{
+						_pending--;
+						Monitor.PulseAll(_saveLock);
 					}
 				}
-				_wh.WaitOne();
 			}
 		}
 

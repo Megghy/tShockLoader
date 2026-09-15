@@ -3636,7 +3636,7 @@ namespace TShockAPI
 			var plr = args.Data.ReadInt16();
 			var thingType = args.Data.ReadInt16();
 
-			var isKnownBoss = (thingType > 0 && thingType < Terraria.ID.NPCID.Count && NPCID.Sets.MPAllowedEnemies[thingType]) || thingType == -16;
+			var isKnownBoss = (thingType > 0 && thingType < NPCID.Sets.MPAllowedEnemies.Length && NPCID.Sets.MPAllowedEnemies[thingType]) || thingType == -16;
 			if (isKnownBoss && !args.Player.HasPermission(Permissions.summonboss))
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandleSpawnBoss rejected boss {0} {1}", args.Player.Name, thingType));
@@ -3855,7 +3855,6 @@ namespace TShockAPI
 			int type = 0;
 			bool isNPC = type == 1;
 			int extraInfo = -1;
-			bool getPositionFromTarget = false;
 
 			if (flag[0])
 			{
@@ -3864,10 +3863,6 @@ namespace TShockAPI
 			if (flag[1])
 			{
 				type = 2;
-			}
-			if (flag[2])
-			{
-				getPositionFromTarget = true;
 			}
 			if (flag[3])
 			{
@@ -4556,7 +4551,8 @@ namespace TShockAPI
 				{
 					0 => NetItem.Loadout1Armor,
 					1 => NetItem.Loadout2Armor,
-					2 => NetItem.Loadout3Armor
+					2 => NetItem.Loadout3Armor,
+					_ => throw new ArgumentOutOfRangeException(nameof(index), index, null),
 				};
 			}
 
@@ -4566,7 +4562,8 @@ namespace TShockAPI
 				{
 					0 => NetItem.Loadout1Dye,
 					1 => NetItem.Loadout2Dye,
-					2 => NetItem.Loadout3Dye
+					2 => NetItem.Loadout3Dye,
+					_ => throw new ArgumentOutOfRangeException(nameof(index), index, null),
 				};
 			}
 

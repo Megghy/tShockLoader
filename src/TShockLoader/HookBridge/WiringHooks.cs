@@ -19,6 +19,11 @@ internal static class WiringHooks
 		Hooks.Wiring.AnnouncementBox += OnAnnouncementBox;
 	}
 
+	public static void Detach()
+	{
+		Hooks.Wiring.AnnouncementBox -= OnAnnouncementBox;
+	}
+
 	static void OnAnnouncementBox(object sender, Hooks.Wiring.AnnouncementBoxEventArgs e)
 	{
 		if (e.Result == HookResult.Cancel)

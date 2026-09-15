@@ -12,7 +12,6 @@ internal class NetHooks
 {
 	private static HookManager _hookManager;
 
-	static readonly object syncRoot = new();
 	static Hook BroadcastChatHook;
 	static Hook SendDataHook;
 	static Hook UpdateConnectedClientsHook;
@@ -30,25 +29,37 @@ internal class NetHooks
 		//HookEvents.Terraria.Netplay.OnConnectionAccepted += OnConnectionAccepted;
 		//Terraria.On_Netplay.OnConnectionAccepted += OnConnectionAccepted;
 		//HookEvents.Terraria.Chat.ChatHelper.BroadcastChatMessage += OnBroadcastChatMessage;
-		var methodFrom = typeof(Terraria.Chat.ChatHelper).GetMethod("BroadcastChatMessage", BindingFlags.Static | BindingFlags.NonPublic);
-		var methodTo = typeof(NetHooks).GetMethod(nameof(OnBroadcastChatMessage), BindingFlags.Static | BindingFlags.NonPublic);
-		BroadcastChatHook = new Hook(methodFrom, methodTo);
-		//HookEvents.Terraria.Net.NetManager.SendData += OnSendNetData;
-		//Terraria.On_Net.NetManager.SendData += OnSendNetData;
-		var methodFrom2 = typeof(Terraria.Net.NetManager).GetMethod("SendData", BindingFlags.Static | BindingFlags.NonPublic);
-		var methodTo2 = typeof(NetHooks).GetMethod(nameof(OnSendNetData), BindingFlags.Static | BindingFlags.NonPublic);
-		SendDataHook = new Hook(methodFrom2, methodTo2);
-		//HookEvents.Terraria.Netplay.UpdateConnectedClients += OnUpdateConnectedClients;
-		var methodFrom3 = typeof(Terraria.Netplay).GetMethod("UpdateConnectedClients", BindingFlags.Static | BindingFlags.NonPublic);
-		var methodTo3 = typeof(NetHooks).GetMethod(nameof(OnUpdateConnectedClients), BindingFlags.Static | BindingFlags.NonPublic);
-		UpdateConnectedClientsHook = new Hook(methodFrom3, methodTo3);
+		BroadcastChatHook = new Hook(
+			HookMethods.Require(typeof(Terraria.Chat.ChatHelper), nameof(Terraria.Chat.ChatHelper.BroadcastChatMessage), BindingFlags.Static | BindingFlags.Public, typeof(NetworkText), typeof(Color), typeof(int)),
+			HookMethods.Require(typeof(NetHooks), nameof(OnBroadcastChatMessage), BindingFlags.Static | BindingFlags.NonPublic));
+		SendDataHook = new Hook(
+			HookMethods.Require(typeof(NetManager), "SendData", BindingFlags.Instance | BindingFlags.NonPublic, typeof(Terraria.Net.Sockets.ISocket), typeof(NetPacket)),
+			HookMethods.Require(typeof(NetHooks), nameof(OnSendNetData), BindingFlags.Static | BindingFlags.NonPublic));
+		UpdateConnectedClientsHook = new Hook(
+			HookMethods.Require(typeof(Netplay), "UpdateConnectedClients", BindingFlags.Static | BindingFlags.NonPublic),
+			HookMethods.Require(typeof(NetHooks), nameof(OnUpdateConnectedClients), BindingFlags.Static | BindingFlags.NonPublic));
 
 		Hooks.NetMessage.SendData += OnSendData;
 		Hooks.NetMessage.SendBytes += OnSendBytes;
 		Hooks.MessageBuffer.GetData += OnReceiveData;
 		Hooks.MessageBuffer.NameCollision += OnNameCollision;
 	}
-	delegate int orig_UpdateConnectedClients();
+
+	public static void Detach()
+	{
+		Terraria.On_NetMessage.greetPlayer -= OnGreetPlayer;
+		BroadcastChatHook?.Dispose();
+		BroadcastChatHook = null;
+		SendDataHook?.Dispose();
+		SendDataHook = null;
+		UpdateConnectedClientsHook?.Dispose();
+		UpdateConnectedClientsHook = null;
+		Hooks.NetMessage.SendData -= OnSendData;
+		Hooks.NetMessage.SendBytes -= OnSendBytes;
+		Hooks.MessageBuffer.GetData -= OnReceiveData;
+		Hooks.MessageBuffer.NameCollision -= OnNameCollision;
+	}
+	delegate void orig_UpdateConnectedClients();
 	static void OnUpdateConnectedClients(orig_UpdateConnectedClients orig)
 	{
 		orig();
@@ -186,32 +197,4 @@ internal class NetHooks
 		}
 	}
 
-	static void OnConnectionAccepted(On_Netplay.orig_OnConnectionAccepted orig, Terraria.Net.Sockets.ISocket client)
-	{
-		int slot = FindNextOpenClientSlot();
-		if (slot != -1)
-		{
-			Netplay.Clients[slot].Reset();
-			Netplay.Clients[slot].Socket = client;
-		}
-		if (FindNextOpenClientSlot() == -1)
-		{
-			//Netplay.StopListening();
-		}
-	}
-
-	static int FindNextOpenClientSlot()
-	{
-		lock (syncRoot)
-		{
-			for (int i = 0; i < Main.maxNetPlayers; i++)
-			{
-				if (!Netplay.Clients[i].IsConnected())
-				{
-					return i;
-				}
-			}
-		}
-		return -1;
-	}
 }

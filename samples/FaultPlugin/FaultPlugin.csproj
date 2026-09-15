@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <BuildMod>false</BuildMod>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>FaultPlugin</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <Import Project="..\..\tModLoader.targets" />
+  <ItemGroup>
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.dll" />
+    <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.CodeFixes.dll" />
+    <ProjectReference Include="..\..\src\TerrariaApi.Server\TerrariaApi.Server.csproj" />
+    <ProjectReference Include="..\..\src\TShockAPI\TShockAPI.csproj" />
+  </ItemGroup>
+</Project>

@@ -105,11 +105,13 @@ namespace TShockAPI.DB
 		/// </summary>
 		public void TryConvertBans()
 		{
-			int res = database.GetSqlType() switch
+			var sqlType = database.GetSqlType();
+			int res = sqlType switch
 			{
 				SqlType.Mysql => database.QueryScalar<int>("SELECT COUNT(table_name) FROM information_schema.tables WHERE table_schema = @0 and table_name = 'Bans'", TShock.Config.Settings.MySqlDbName),
 				SqlType.Sqlite => database.QueryScalar<int>("SELECT COUNT(name) FROM sqlite_master WHERE type='table' AND name = 'Bans'"),
 				SqlType.Postgres => database.QueryScalar<int>("SELECT COUNT(table_name) FROM information_schema.tables WHERE table_name = 'Bans'"),
+				_ => throw new NotSupportedException($"Cannot convert bans for SQL type {sqlType}."),
 			};
 
 			if (res != 0)

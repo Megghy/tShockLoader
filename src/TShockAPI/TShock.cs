@@ -245,6 +245,17 @@ namespace TShockAPI
 			return handle;
 		}
 
+		static string ResolveDataPath(string path)
+		{
+			if (Path.IsPathRooted(path))
+				return Path.GetFullPath(path);
+
+			var relative = path.Replace('\\', '/');
+			if (relative.StartsWith("tshock/", StringComparison.OrdinalIgnoreCase))
+				relative = relative["tshock/".Length..];
+			return Path.GetFullPath(Path.Combine(SavePath, relative));
+		}
+
 		/// <summary>Initialize - Called by the TerrariaServerAPI during initialization.</summary>
 		[SuppressMessage("Microsoft.Security", "CA2122:DoNotIndirectlyExposeMethodsWithLinkDemands")]
 		public override void Initialize()
@@ -288,6 +299,7 @@ namespace TShockAPI
 				// Log path was not already set by the command line parameter?
 				if (LogPath == LogPathDefault)
 					LogPath = Config.Settings.LogPath;
+				LogPath = ResolveDataPath(LogPath);
 				try
 				{
 					logFilename = Path.Combine(LogPath, now.ToString(LogFormat) + ".log");
@@ -415,9 +427,9 @@ namespace TShockAPI
 
 				if (Game != null)
 				{
-					// Initialize the AchievementManager, which is normally only done on clients.
-					//Game._achievements = new AchievementManager();
-					Game.AsDynamic()._achievements = new AchievementManager();
+					var achievements = typeof(Main).GetField("_achievements", BindingFlags.Instance | BindingFlags.NonPublic)
+						?? throw new MissingFieldException(typeof(Main).FullName, "_achievements");
+					achievements.SetValue(Game, new AchievementManager());
 
 					//OTAPI.Hooks.Initializers.AchievementInitializerLoad += OnAchievementInitializerLoad;
 
@@ -529,10 +541,10 @@ namespace TShockAPI
 					File.Delete(Path.Combine(SavePath, "tshock.pid"));
 				}
 
-				RestApi.Dispose();
-				Log.Dispose();
+				RestApi?.Dispose();
+				Log?.Dispose();
 
-				RegionSystem.Dispose();
+				RegionSystem?.Dispose();
 			}
 			base.Dispose(disposing);
 		}
@@ -768,7 +780,7 @@ namespace TShockAPI
 					//The .After Action is run after the pathChecker Action
 					.After(() =>
 					{
-						SavePath = path ?? "tshock";
+						SavePath = path ?? SavePath;
 						if (path != null)
 						{
 							ServerApi.LogWriter.PluginWriteLine(this, GetString("Config path has been set to {0}", path), TraceLevel.Info);
@@ -1629,6 +1641,8 @@ namespace TShockAPI
 				return;
 
 			PacketTypes type = e.MsgID;
+			if (PacketTypesUtil.IsTmlProtocol(type))
+				return;
 
 			var player = Players[e.Msg.whoAmI];
 			if (player == null || !player.ConnectionAlive)

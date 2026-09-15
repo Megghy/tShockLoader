@@ -2,7 +2,7 @@
   <PropertyGroup>
     <BuildMod>false</BuildMod>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>SamplePlugin</AssemblyName>
+    <AssemblyName>ProbePlugin</AssemblyName>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

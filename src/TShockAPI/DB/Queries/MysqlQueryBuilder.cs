@@ -69,6 +69,7 @@ public class MysqlQueryBuilder : GenericQueryBuilder, IQueryBuilder
 		{ MySqlDbType.Double, "DOUBLE" },
 		{ MySqlDbType.Int32, "INT" },
 		{ MySqlDbType.Int64, "BIGINT"},
+		{ MySqlDbType.Blob, "LONGBLOB"},
 		{ MySqlDbType.DateTime, "DATETIME"},
 	};
 

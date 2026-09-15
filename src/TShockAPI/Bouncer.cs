@@ -644,8 +644,8 @@ namespace TShockAPI
 				}
 
 				if (editData < 0 ||
-					((action == EditAction.PlaceTile || action == EditAction.ReplaceTile) && editData >= Terraria.ID.TileID.Count) ||
-					((action == EditAction.PlaceWall || action == EditAction.ReplaceWall) && editData >= Terraria.ID.WallID.Count))
+					((action == EditAction.PlaceTile || action == EditAction.ReplaceTile) && editData >= ContentIds.Tiles) ||
+					((action == EditAction.PlaceWall || action == EditAction.ReplaceWall) && editData >= ContentIds.Walls))
 				{
 					TShock.Log.ConsoleDebug(GetString("Bouncer / OnTileEdit rejected from editData out of bounds {0} {1} {2}", args.Player.Name, action, editData));
 					args.Player.SendTileSquareCentered(tileX, tileY, 4);
@@ -1110,7 +1110,7 @@ namespace TShockAPI
 			}
 
 			// player is attempting to crash clients
-			if (type < -48 || type >= Terraria.ID.ItemID.Count)
+			if (type < -48 || type >= ContentIds.Items)
 			{
 				// Causes item duplications. Will be re added later if necessary
 				//args.Player.SendData(PacketTypes.ItemDrop, "", id);
@@ -1122,7 +1122,7 @@ namespace TShockAPI
 			// make sure the prefix is a legit value
 			// Note: Not checking if prefix is less than 1 because if it is, this check
 			// will break item pickups on the client.
-			if (prefix > PrefixID.Count)
+			if (prefix >= ContentIds.Prefixes)
 			{
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnItemDrop rejected from prefix check from {0}", args.Player.Name));
 
@@ -1947,7 +1947,7 @@ namespace TShockAPI
 				return;
 			}
 
-			if (type >= Terraria.ID.BuffID.Count)
+			if (type < 0 || type >= ContentIds.Buffs)
 			{
 				TShock.Log.ConsoleDebug(GetString(
 					"Bouncer / OnPlayerBuff rejected {0} ({1}) applying buff {2} to {3} for {4} ticks: invalid buff type", args.Player.Name,
@@ -1976,6 +1976,9 @@ namespace TShockAPI
 			}
 
 			var targetPlayer = TShock.Players[id];
+			if (type >= PlayerAddBuffWhitelist.Length)
+				return;
+
 			var buffLimit = PlayerAddBuffWhitelist[type];
 
 			if (!args.Player.IsInRange(targetPlayer.TileX, targetPlayer.TileY, 50))
@@ -2284,7 +2287,7 @@ namespace TShockAPI
 				return;
 			}
 
-			if (type < 0 || type >= Terraria.ID.TileID.Count)
+			if (type < 0 || type >= ContentIds.Tiles)
 			{
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnPlaceObject rejected out of bounds tile from {0}", args.Player.Name));
 				args.Handled = true;
@@ -2749,7 +2752,7 @@ namespace TShockAPI
 			short id = args.PlayerId;
 			PlayerDeathReason playerDeathReason = args.PlayerDeathReason;
 
-			if (damage > 42000) //Abnormal values have the potential to cause infinite loops in the server.
+			if (damage < 0)
 			{
 				TShock.Log.ConsoleDebug(GetString("Bouncer / OnKillMe rejected high damage from {0} {1}", args.Player.Name, damage));
 				args.Player.Kick(GetString("Failed to shade polygon normals."), true, true);
