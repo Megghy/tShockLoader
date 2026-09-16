@@ -125,3 +125,14 @@ namespace SamplePlugin
 - `args.Handled = true`：表示阻止后续原版操作执行。
 - `args.Handled = false`：表示放行，保持正常流程。
 - 模组的 ModPacket/ModFile 扩展包（249–253）不会进入 TSAPI `NetGetData` 拦截。
+
+### 4.3 可选 TML 入口
+
+引用 `TShockLoader.Abstractions`（net6.0）。tShockLoader 会提供进程内唯一实例；普通 TShock 没有提供者。
+
+```csharp
+if (TmlBridge.TryGet(out var tml))
+{
+    // tml.Host.Product == "tShockLoader"
+}
+```

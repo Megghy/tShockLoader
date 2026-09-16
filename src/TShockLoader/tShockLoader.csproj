@@ -14,11 +14,13 @@
     <Analyzer Remove="$(tMLLibraryPath)/tModCodeAssist/1.0.0/tModCodeAssist.CodeFixes.dll" />
     <ProjectReference Include="..\TerrariaApi.Server\TerrariaApi.Server.csproj" />
     <ProjectReference Include="..\TShockAPI\TShockAPI.csproj" />
+    <ProjectReference Include="..\TShockLoader.Abstractions\TShockLoader.Abstractions.csproj" />
   </ItemGroup>
   <Target Name="StagePackedLibraries" BeforeTargets="BuildMod" Condition="'$(BuildMod)' == 'true'">
     <ItemGroup>
       <_PackedLib Include="$(TargetDir)TerrariaApi.Server.dll" />
       <_PackedLib Include="$(TargetDir)TShockAPI.dll" />
+      <_PackedLib Include="$(TargetDir)TShockLoader.Abstractions.dll" />
       <_PackedLib Include="$(TargetDir)BCrypt.Net-Next.dll" />
       <_PackedLib Include="$(TargetDir)GetText.dll" />
       <_PackedLib Include="$(TargetDir)HttpServer.dll" />

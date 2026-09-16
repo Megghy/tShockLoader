@@ -1,11 +1,13 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using Terraria;
 using Terraria.ModLoader;
 using TerrariaApi.Server;
 using TerrariaApi.Server.Hooking;
 using TShockAPI;
+using TShockLoader.Abstractions;
 using tShockLoader.Plugins;
 
 namespace tShockLoader.Runtime;
@@ -15,6 +17,7 @@ public static class PluginHost
     static Mod? mod;
     static bool bound;
     static bool hooksAttached;
+    static bool tmlBound;
     static bool pluginsLoaded;
 
     public static void Start(Mod owner)
@@ -42,6 +45,11 @@ public static class PluginHost
             hooksAttached = true;
             Log($"Main.dedServ={Main.dedServ} gameMenu={Main.gameMenu} netMode={Main.netMode}");
 
+            BindAbstractions(owner);
+            TmlBridge.Bind(new HostTmlContext());
+            tmlBound = true;
+            Log("tml bridge bound");
+
             PluginLoader.Load(Main.instance);
             pluginsLoaded = true;
             ServerApi.Hooks.InvokeGameInitialize();
@@ -67,6 +75,9 @@ public static class PluginHost
         if (pluginsLoaded || bound)
             first = RunCleanup(PluginLoader.Unload, first);
 
+        if (tmlBound)
+            first = RunCleanup(TmlBridge.Unbind, first);
+
         if (hooksAttached)
         {
             first = RunCleanup(ApiHooks.Detach, first);
@@ -84,6 +95,7 @@ public static class PluginHost
 
         bound = false;
         hooksAttached = false;
+        tmlBound = false;
         pluginsLoaded = false;
         mod = null;
         if (first is not null)
@@ -100,6 +112,14 @@ public static class PluginHost
     }
 
     static IntPtr sqliteInterop;
+
+    static void BindAbstractions(Mod owner)
+    {
+        const string packed = "TShockLoader.Abstractions.dll";
+        if (!owner.FileExists(packed))
+            throw new FileNotFoundException($"tShockLoader.tmod is missing {packed}.");
+        PluginLoader.SetAbstractionsHash(SHA256.HashData(owner.GetFileBytes(packed)));
+    }
 
     static void ExtractNativeLibraries(Mod owner, LoaderPaths paths)
     {

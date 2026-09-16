@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Security.Cryptography;
 using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
+using TShockLoader.Abstractions;
 using tShockLoader.Relinker;
 
 namespace tShockLoader.Plugins;
@@ -22,12 +24,14 @@ static class PluginLoader
 
     static readonly Dictionary<string, Assembly> loadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
     static readonly List<PluginContainer> initializedOrder = [];
+    static byte[]? abstractionsHash;
 
     internal static void Load(Main game)
     {
         loadedAssemblies["TShockAPI"] = typeof(TShock).Assembly;
         loadedAssemblies["TerrariaApi.Server"] = typeof(ServerApi).Assembly;
         loadedAssemblies["tShockLoader"] = typeof(PluginLoader).Assembly;
+        loadedAssemblies["TShockLoader.Abstractions"] = typeof(TmlBridge).Assembly;
         ServerApi.AdditionalAssemblyResolve = ResolveLoaded;
         HostContext.Resolving -= ResolveHost;
         HostContext.Resolving += ResolveHost;
@@ -51,6 +55,12 @@ static class PluginLoader
         foreach (var file in EnumeratePluginFiles(pluginRoot))
         {
             var id = Path.GetFileNameWithoutExtension(file.Name);
+            if (id.Equals("TShockLoader.Abstractions", StringComparison.OrdinalIgnoreCase))
+            {
+                VerifyAbstractionsCopy(file.FullName);
+                continue;
+            }
+
             if (ignored.Contains(id) || ignored.Contains(file.Name))
             {
                 ServerApi.LogWriter.ServerWriteLine($"{id} was ignored from being loaded.", TraceLevel.Verbose);
@@ -131,6 +141,7 @@ static class PluginLoader
         OtapiRuntimeBinder.DisposeAll();
         initializedOrder.Clear();
         loadedAssemblies.Clear();
+        abstractionsHash = null;
         if (first is not null)
             throw first;
     }
@@ -155,6 +166,28 @@ static class PluginLoader
         }
 
         return first;
+    }
+
+    internal static void SetAbstractionsHash(byte[] hash) => abstractionsHash = hash;
+
+    static void VerifyAbstractionsCopy(string path)
+    {
+        if (abstractionsHash is null)
+        {
+            throw new InvalidOperationException(
+                $"ServerPlugins contains {path}, but the host TShockLoader.Abstractions hash is not available.");
+        }
+
+        var disk = SHA256.HashData(File.ReadAllBytes(path));
+        if (!disk.SequenceEqual(abstractionsHash))
+        {
+            throw new InvalidOperationException(
+                $"TShockLoader.Abstractions at {path} does not match the host copy.");
+        }
+
+        ServerApi.LogWriter.ServerWriteLine(
+            $"reuse TShockLoader.Abstractions from host (identical copy at {path})",
+            TraceLevel.Info);
     }
 
     static void RejectCoreCopies(string pluginRoot)
