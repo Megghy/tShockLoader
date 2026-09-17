@@ -7,6 +7,7 @@ using TerrariaApi.Server;
 using TShockAPI;
 using TShockLoader.Abstractions;
 using tShockLoader.Relinker;
+using tShockLoader.Runtime;
 
 namespace tShockLoader.Plugins;
 
@@ -90,7 +91,7 @@ static class PluginLoader
             loadedAssemblies["OTAPI.Runtime"] = OtapiRuntime.Assembly;
 
         foreach (var item in pending)
-            LoadPluginAssembly(item.Pe, item.Id, game, initWatches);
+            LoadPluginAssembly(item.Path, item.Pe, item.Id, game, initWatches);
 
         var sequence = ServerApi.Plugins
             .OrderBy(p => p.Plugin.Order)
@@ -214,16 +215,30 @@ static class PluginLoader
             .OrderBy(f => f.Name, StringComparer.Ordinal);
     }
 
-    static void LoadPluginAssembly(byte[] pe, string id, Main game, Dictionary<TerrariaPlugin, Stopwatch> initWatches)
+    static void LoadPluginAssembly(string path, byte[] pe, string id, Main game, Dictionary<TerrariaPlugin, Stopwatch> initWatches)
     {
         if (!loadedAssemblies.TryGetValue(id, out var assembly))
         {
-            using var stream = new MemoryStream(pe, writable: false);
-            assembly = HostContext.LoadFromStream(stream);
+            assembly = LoadFromPe(path, pe);
             loadedAssemblies[id] = assembly;
         }
 
         CollectPlugins(assembly, game, initWatches);
+    }
+
+    static Assembly LoadFromPe(string sourcePath, byte[] pe)
+    {
+        var full = Path.GetFullPath(sourcePath);
+        var disk = File.ReadAllBytes(full);
+        if (pe.AsSpan().SequenceEqual(disk))
+            return HostContext.LoadFromAssemblyPath(full);
+
+        var dir = Path.Combine(LoaderPaths.Current.CacheRoot, "plugins");
+        Directory.CreateDirectory(dir);
+        var dest = Path.Combine(dir, Path.GetFileName(full));
+        if (!File.Exists(dest) || !File.ReadAllBytes(dest).AsSpan().SequenceEqual(pe))
+            File.WriteAllBytes(dest, pe);
+        return HostContext.LoadFromAssemblyPath(dest);
     }
 
     static byte[] RelinkPluginFile(string path)
@@ -324,8 +339,7 @@ static class PluginLoader
             throw new InvalidOperationException($"Core assembly copy found at {candidate}.");
 
         var pe = RelinkPluginFile(candidate);
-        using var stream = new MemoryStream(pe, writable: false);
-        var assembly = HostContext.LoadFromStream(stream);
+        var assembly = LoadFromPe(candidate, pe);
         loadedAssemblies[name] = assembly;
         return assembly;
     }

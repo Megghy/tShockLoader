@@ -49,32 +49,31 @@ namespace TShockAPI.Localization
 			CaptureVanillaCommands();
 		}
 
-		public static void RebuildContentNames()
+		public static void RebuildContentNames() => ContentNames.Rebuild();
+
+		internal static void CaptureFromLang()
 		{
-			WithEnglishCulture(() =>
+			ItemNames.Clear();
+			NpcNames.Clear();
+			Prefixs.Clear();
+			Buffs.Clear();
+
+			for (var i = -48; i < ContentIds.Items; i++)
+				ItemNames[i] = Lang.GetItemNameValue(i) ?? string.Empty;
+
+			for (var i = -17; i < ContentIds.Npcs; i++)
+				NpcNames[i] = Lang.GetNPCNameValue(i) ?? string.Empty;
+
+			for (var i = 0; i < ContentIds.Buffs; i++)
+				Buffs[i] = Lang.GetBuffName(i) ?? string.Empty;
+
+			var prefixCount = Math.Min(ContentIds.Prefixes, Lang.prefix.Length);
+			for (var i = 0; i < prefixCount; i++)
 			{
-				ItemNames.Clear();
-				NpcNames.Clear();
-				Prefixs.Clear();
-				Buffs.Clear();
-
-				for (var i = -48; i < ContentIds.Items; i++)
-					ItemNames[i] = Lang.GetItemNameValue(i) ?? string.Empty;
-
-				for (var i = -17; i < ContentIds.Npcs; i++)
-					NpcNames[i] = Lang.GetNPCNameValue(i) ?? string.Empty;
-
-				for (var i = 0; i < ContentIds.Buffs; i++)
-					Buffs[i] = Lang.GetBuffName(i) ?? string.Empty;
-
-				var prefixCount = Math.Min(ContentIds.Prefixes, Lang.prefix.Length);
-				for (var i = 0; i < prefixCount; i++)
-				{
-					var text = Lang.prefix[i];
-					if (text is not null)
-						Prefixs[i] = text.Value;
-				}
-			});
+				var text = Lang.prefix[i];
+				if (text is not null)
+					Prefixs[i] = text.Value;
+			}
 		}
 
 		static void CaptureVanillaCommands()

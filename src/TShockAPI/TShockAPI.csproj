@@ -35,7 +35,6 @@
     <Reference Include="System.Data.SQLite">
       <HintPath>lib\System.Data.SQLite.dll</HintPath>
     </Reference>
-    <Using Include="ReflectionMagic" />
     <None Include="lib\SQLite.Interop.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -730,7 +730,7 @@ namespace TShockAPI
 			{
 				if (Main.worldPathName != null && Config.Settings.SaveWorldOnCrash)
 				{
-					Main.ActiveWorldFileData.AsDynamic()._path += ".crash";
+					PrivateMembers.Set(Main.ActiveWorldFileData, "_path", Main.worldPathName + ".crash");
 					SaveManager.Instance.SaveWorld();
 				}
 			}
@@ -1400,19 +1400,17 @@ namespace TShockAPI
 
 			//Reset toggle creative powers to default, preventing potential power transfer & desync on another user occupying this slot later.
 
-			foreach (var kv in CreativePowerManager.Instance.AsDynamic()._powersById)
+			foreach (var kv in PrivateMembers.Get<Dictionary<ushort, ICreativePower>>(CreativePowerManager.Instance, "_powersById"))
 			{
-				var power = kv.Value;
+				if (kv.Value is not CreativePowers.APerPlayerTogglePower toggle)
+					continue;
 
-				//No need to reset sliders - those are reset manually by the game, most likely an oversight that toggles don't receive this treatment.
+				var enabled = PrivateMembers.Get<bool[]>(toggle, "_perPlayerIsEnabled");
+				var defaultState = PrivateMembers.Get<bool>(toggle, "_defaultToggleState");
+				if (enabled[args.Who] == defaultState)
+					continue;
 
-				if (power is CreativePowers.APerPlayerTogglePower toggle)
-				{
-					if (toggle.AsDynamic()._perPlayerIsEnabled[args.Who] == toggle.AsDynamic()._defaultToggleState)
-						continue;
-
-					toggle.SetEnabledState(args.Who, toggle.AsDynamic()._defaultToggleState);
-				}
+				toggle.SetEnabledState(args.Who, defaultState);
 			}
 
 			if (tsplr.ReceivedInfo)
@@ -1488,18 +1486,16 @@ namespace TShockAPI
 			// Terraria now has chat commands on the client side.
 			// These commands remove the commands prefix (e.g. /me /playing) and send the command id instead
 			// In order for us to keep legacy code we must reverse this and get the prefix using the command id
-			foreach (KeyValuePair<LocalizedText, ChatCommandId> item in Terraria.UI.Chat.ChatManager.Commands.AsDynamic()._localizedCommands)
+			var commandName = PrivateMembers.Get<string>(args.CommandId, "_name");
+			if (!string.IsNullOrEmpty(commandName))
 			{
-				if (item.Value.AsDynamic()._name == args.CommandId.AsDynamic()._name)
+				foreach (var item in PrivateMembers.Get<Dictionary<LocalizedText, ChatCommandId>>(Terraria.UI.Chat.ChatManager.Commands, "_localizedCommands"))
 				{
-					if (!String.IsNullOrEmpty(text))
-					{
-						text = EnglishLanguage.GetCommandPrefixByName(item.Value.AsDynamic()._name) + ' ' + text;
-					}
-					else
-					{
-						text = EnglishLanguage.GetCommandPrefixByName(item.Value.AsDynamic()._name);
-					}
+					if (PrivateMembers.Get<string>(item.Value, "_name") != commandName)
+						continue;
+
+					var prefix = EnglishLanguage.GetCommandPrefixByName(commandName);
+					text = string.IsNullOrEmpty(text) ? prefix : prefix + " " + text;
 					break;
 				}
 			}

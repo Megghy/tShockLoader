@@ -62,16 +62,6 @@ namespace TShockAPI
 		/// </summary>
 		public const string CyanHighlight = "AAFFFF";
 
-		/// <summary>
-		/// The lowest id for a prefix.
-		/// </summary>
-		private const int FirstItemPrefix = 1;
-
-		/// <summary>
-		/// The highest id for a prefix.
-		/// </summary>
-		private const int LastItemPrefix = 83;
-
 		/// <summary>instance - an instance of the utils class</summary>
 		private static readonly Utils instance = new Utils();
 
@@ -274,49 +264,7 @@ namespace TShockAPI
 		/// <param name="name">name</param>
 		/// <returns>List of Items</returns>
 		public List<Item> GetItemByName(string name)
-		{
-			var startswith = new List<int>();
-			var contains = new List<int>();
-			for (int i = 1; i < ContentIds.Items; i++)
-			{
-				var currentName = Lang.GetItemNameValue(i);
-				if (!string.IsNullOrEmpty(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<Item> { GetItemById(i) };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-				currentName = EnglishLanguage.GetItemNameById(i);
-				if (!string.IsNullOrEmpty(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<Item> { GetItemById(i) };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-			}
-
-			if (startswith.Count != 1)
-				startswith.AddRange(contains);
-			return startswith.Select(GetItemById).ToList();
-		}
+			=> ContentNames.MatchItems(name).Select(GetItemById).ToList();
 
 		/// <summary>
 		/// Gets an item based on a chat item tag.
@@ -373,49 +321,7 @@ namespace TShockAPI
 		/// <param name="name">Name</param>
 		/// <returns>List of matching NPCs</returns>
 		public List<NPC> GetNPCByName(string name)
-		{
-			var startswith = new List<int>();
-			var contains = new List<int>();
-			for (int i = -17; i < ContentIds.Npcs; i++)
-			{
-				var currentName = Lang.GetNPCNameValue(i);
-				if (!string.IsNullOrEmpty(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<NPC> { GetNPCById(i) };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-				currentName = EnglishLanguage.GetNpcNameById(i);
-				if (!string.IsNullOrEmpty(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<NPC> { GetNPCById(i) };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-			}
-
-			if (startswith.Count != 1)
-				startswith.AddRange(contains);
-			return startswith.Select(GetNPCById).ToList();
-		}
+			=> ContentNames.MatchNpcs(name).Select(GetNPCById).ToList();
 
 		/// <summary>
 		/// Gets a buff name by id
@@ -443,49 +349,7 @@ namespace TShockAPI
 		/// <param name="name">name</param>
 		/// <returns>Matching list of buff ids</returns>
 		public List<int> GetBuffByName(string name)
-		{
-			var startswith = new List<int>();
-			var contains = new List<int>();
-			for (int i = 1; i < ContentIds.Buffs; i++)
-			{
-				var currentName = Lang.GetBuffName(i);
-				if (!string.IsNullOrWhiteSpace(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<int> { i };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-				currentName = EnglishLanguage.GetBuffNameById(i);
-				if (!string.IsNullOrWhiteSpace(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<int> { i };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-			}
-
-			if (startswith.Count != 1)
-				startswith.AddRange(contains);
-			return startswith;
-		}
+			=> ContentNames.MatchBuffs(name);
 
 		/// <summary>
 		/// Gets a prefix based on its id
@@ -494,7 +358,7 @@ namespace TShockAPI
 		/// <returns>Prefix name</returns>
 		public string GetPrefixById(int id)
 		{
-			return id < FirstItemPrefix || id > LastItemPrefix ? "" : Lang.prefix[id].ToString() ?? "";
+			return id < 1 || id >= ContentIds.Prefixes ? "" : Lang.prefix[id].ToString() ?? "";
 		}
 
 		/// <summary>
@@ -503,49 +367,7 @@ namespace TShockAPI
 		/// <param name="name">Name</param>
 		/// <returns>List of prefix IDs</returns>
 		public List<int> GetPrefixByName(string name)
-		{
-			var startswith = new List<int>();
-			var contains = new List<int>();
-			for (int i = FirstItemPrefix; i <= LastItemPrefix; i++)
-			{
-				var currentName = Lang.prefix[i].ToString();
-				if (!string.IsNullOrWhiteSpace(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<int> { i };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-				currentName = EnglishLanguage.GetPrefixById(i);
-				if (!string.IsNullOrWhiteSpace(currentName))
-				{
-					if (currentName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
-						return new List<int> { i };
-					if (currentName.StartsWith(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						startswith.Add(i);
-						continue;
-					}
-					if (currentName.Contains(name, StringComparison.InvariantCultureIgnoreCase))
-					{
-						contains.Add(i);
-						continue;
-					}
-				}
-			}
-
-			if (startswith.Count != 1)
-				startswith.AddRange(contains);
-			return startswith;
-		}
+			=> ContentNames.MatchPrefixes(name);
 
 		/// <summary>
 		/// Gets a prefix by ID or name
@@ -555,7 +377,7 @@ namespace TShockAPI
 		public List<int> GetPrefixByIdOrName(string idOrName)
 		{
 			int type = -1;
-			if (int.TryParse(idOrName, out type) && type >= FirstItemPrefix && type <= LastItemPrefix)
+			if (int.TryParse(idOrName, out type) && type >= 1 && type < ContentIds.Prefixes)
 			{
 				return new List<int> { type };
 			}

@@ -62,7 +62,7 @@ namespace TShockAPI
 				string worldname = Main.worldPathName;
 				string name = Path.GetFileName(worldname);
 
-				Main.ActiveWorldFileData.AsDynamic()._path = Path.Combine(BackupPath, string.Format("{0}.{1:yyyy-MM-ddTHH.mm.ssZ}.bak", name, DateTime.UtcNow));
+				PrivateMembers.Set(Main.ActiveWorldFileData, "_path", Path.Combine(BackupPath, string.Format("{0}.{1:yyyy-MM-ddTHH.mm.ssZ}.bak", name, DateTime.UtcNow)));
 
 				string worldpath = Path.GetDirectoryName(Main.worldPathName);
 				if (worldpath != null && !Directory.Exists(worldpath))
@@ -79,7 +79,7 @@ namespace TShockAPI
 				Console.ForegroundColor = ConsoleColor.Gray;
 				TShock.Log.Info(GetString("World backed up ({0}).", Main.worldPathName));
 
-				Main.ActiveWorldFileData.AsDynamic()._path = worldname;
+				PrivateMembers.Set(Main.ActiveWorldFileData, "_path", worldname);
 			}
 			catch (Exception ex)
 			{

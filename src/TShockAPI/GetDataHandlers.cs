@@ -156,6 +156,14 @@ namespace TShockAPI
 				};
 		}
 
+		static (int Type, int Prefix, int Stack) ReadTmlItem(MemoryStream data, bool readStack = true)
+		{
+			int type = data.ReadEncodedInt();
+			int prefix = data.ReadEncodedInt();
+			int stack = readStack ? data.ReadEncodedInt() : 0;
+			return (type, prefix, stack);
+		}
+
 		public static bool HandlerGetData(PacketTypes type, TSPlayer player, MemoryStream data)
 		{
 			GetDataHandlerDelegate handler;
@@ -2437,7 +2445,7 @@ namespace TShockAPI
 			int skinVariant = args.Data.ReadByte();
 			var hair = args.Data.ReadInt8();
 			string name = args.Data.ReadString();
-			byte hairDye = args.Data.ReadInt8();
+			int hairDye = args.Data.ReadEncodedInt();
 
 			BitsByte hideVisual = args.Data.ReadInt8();
 			BitsByte hideVisual2 = args.Data.ReadInt8();
@@ -2570,9 +2578,7 @@ namespace TShockAPI
 		{
 			byte plr = args.Data.ReadInt8();
 			short slot = args.Data.ReadInt16();
-			short stack = args.Data.ReadInt16();
-			byte prefix = args.Data.ReadInt8();
-			short type = args.Data.ReadInt16();
+			var (type, prefix, stack) = ReadTmlItem(args.Data);
 
 			// Players send a slot update packet for each inventory slot right after they've joined.
 			bool bypassTrashCanCheck = false;
@@ -2582,9 +2588,11 @@ namespace TShockAPI
 				bypassTrashCanCheck = true;
 			}
 
-			if (OnPlayerSlot(args.Player, args.Data, plr, slot, stack, prefix, type) || plr != args.Player.Index || slot < 0 ||
-				slot > NetItem.MaxInventory)
+			if (OnPlayerSlot(args.Player, args.Data, plr, slot, (short)stack, (byte)prefix, (short)type) || plr != args.Player.Index)
 				return true;
+			// Extra accessory slots use TML PlayerItemSlotID values outside vanilla inventory.
+			if (slot < 0 || slot > NetItem.MaxInventory)
+				return false;
 			if (args.Player.IgnoreSSCPackets)
 			{
 				TShock.Log.ConsoleDebug(GetString("GetDataHandlers / HandlePlayerSlot rejected ignore ssc packets"));
@@ -2943,12 +2951,12 @@ namespace TShockAPI
 			var id = args.Data.ReadInt16();
 			var pos = new Vector2(args.Data.ReadSingle(), args.Data.ReadSingle());
 			var vel = new Vector2(args.Data.ReadSingle(), args.Data.ReadSingle());
-			var stacks = args.Data.ReadInt16();
-			var prefix = args.Data.ReadInt8();
+			var stacks = args.Data.ReadEncodedInt();
+			var prefix = args.Data.ReadEncodedInt();
 			var noDelay = args.Data.ReadInt8() == 1;
 			var type = args.Data.ReadInt16();
 
-			if (OnItemDrop(args.Player, args.Data, id, pos, vel, stacks, prefix, noDelay, type))
+			if (OnItemDrop(args.Player, args.Data, id, pos, vel, (short)stacks, (byte)prefix, noDelay, type))
 				return true;
 
 			return false;
@@ -3022,12 +3030,21 @@ namespace TShockAPI
 		private static bool HandleNpcStrike(GetDataHandlerArgs args)
 		{
 			var id = args.Data.ReadInt16();
-			var dmg = args.Data.ReadInt16();
-			var knockback = args.Data.ReadSingle();
-			var direction = (byte)(args.Data.ReadInt8() - 1);
-			var crit = args.Data.ReadInt8();
+			var dmg = args.Data.ReadEncodedInt();
+			byte direction = 0;
+			float knockback = 0f;
+			byte crit = 0;
+			if (dmg >= 0)
+			{
+				args.Data.ReadEncodedInt();
+				args.Data.ReadEncodedInt();
+				direction = (byte)args.Data.ReadInt8();
+				knockback = args.Data.ReadSingle();
+				BitsByte flags = args.Data.ReadInt8();
+				crit = (byte)(flags[0] ? 1 : 0);
+			}
 
-			if (OnNPCStrike(args.Player, args.Data, id, direction, dmg, knockback, crit))
+			if (OnNPCStrike(args.Player, args.Data, id, direction, (short)dmg, knockback, crit))
 				return true;
 
 			if (Main.npc[id].townNPC && !args.Player.HasPermission(Permissions.hurttownnpc))
@@ -3155,11 +3172,9 @@ namespace TShockAPI
 		{
 			var id = args.Data.ReadInt16();
 			var slot = args.Data.ReadInt8();
-			var stacks = args.Data.ReadInt16();
-			var prefix = args.Data.ReadInt8();
-			var type = args.Data.ReadInt16();
+			var (type, prefix, stacks) = ReadTmlItem(args.Data);
 
-			if (OnChestItemChange(args.Player, args.Data, id, slot, stacks, prefix, type))
+			if (OnChestItemChange(args.Player, args.Data, id, slot, (short)stacks, (byte)prefix, (short)type))
 				return true;
 
 			Item item = new Item();
@@ -4110,12 +4125,11 @@ namespace TShockAPI
 		{
 			var x = args.Data.ReadInt16();
 			var y = args.Data.ReadInt16();
-			var itemID = args.Data.ReadInt16();
-			var prefix = args.Data.ReadInt8();
-			var stack = args.Data.ReadInt16();
+			var (itemID, prefix, _) = ReadTmlItem(args.Data, readStack: false);
+			var stack = args.Data.ReadEncodedInt();
 			var itemFrame = (TEItemFrame)TileEntity.ByID[TEItemFrame.Find(x, y)];
 
-			if (OnPlaceItemFrame(args.Player, args.Data, x, y, itemID, prefix, stack, itemFrame))
+			if (OnPlaceItemFrame(args.Player, args.Data, x, y, (short)itemID, (byte)prefix, (short)stack, itemFrame))
 			{
 				return true;
 			}
@@ -4291,15 +4305,38 @@ namespace TShockAPI
 		private static bool HandlePlayerDamageV2(GetDataHandlerArgs args)
 		{
 			var id = args.Data.ReadInt8();
-			PlayerDeathReason playerDeathReason = PlayerDeathReason.FromReader(new BinaryReader(args.Data));
-			var dmg = args.Data.ReadInt16();
-			var direction = (byte)(args.Data.ReadInt8() - 1);
-			var bits = (BitsByte)(args.Data.ReadByte());
-			var crit = bits[0];
-			var pvp = bits[1];
-			var cooldownCounter = (sbyte)args.Data.ReadInt8();
+			var reader = new BinaryReader(args.Data, Encoding.UTF8, leaveOpen: true);
+			PlayerDeathReason playerDeathReason;
+			int dmg;
+			byte direction;
+			bool crit;
+			bool pvp;
+			sbyte cooldownCounter;
+			if (id == 255)
+			{
+				id = reader.ReadByte();
+				BitsByte pack = reader.ReadByte();
+				playerDeathReason = PlayerDeathReason.FromReader(reader);
+				pvp = pack[0];
+				cooldownCounter = reader.ReadSByte();
+				reader.Read7BitEncodedInt();
+				dmg = reader.Read7BitEncodedInt();
+				direction = (byte)reader.ReadSByte();
+				reader.ReadSingle();
+				crit = false;
+			}
+			else
+			{
+				playerDeathReason = PlayerDeathReason.FromReader(reader);
+				dmg = reader.ReadInt16();
+				direction = (byte)(reader.ReadByte() - 1);
+				BitsByte bits = reader.ReadByte();
+				crit = bits[0];
+				pvp = bits[1];
+				cooldownCounter = reader.ReadSByte();
+			}
 
-			if (OnPlayerDamage(args.Player, args.Data, id, direction, dmg, pvp, crit, cooldownCounter, playerDeathReason))
+			if (OnPlayerDamage(args.Player, args.Data, id, direction, (short)dmg, pvp, crit, cooldownCounter, playerDeathReason))
 				return true;
 
 			return false;
@@ -4399,20 +4436,15 @@ namespace TShockAPI
 			TEDisplayDoll displayDoll = tileEntity as TEDisplayDoll;
 			if (displayDoll != null)
 			{
-				oldItem = displayDoll.AsDynamic()._items[slot];
-				if (isDye)
-					oldItem = displayDoll.AsDynamic()._dyes[slot];
+				oldItem = PrivateMembers.Get<Item[]>(displayDoll, isDye ? "_dyes" : "_items")[slot];
 
-				ushort itemType = args.Data.ReadUInt16();
-				ushort stack = args.Data.ReadUInt16();
-				int prefix = args.Data.ReadByte();
-
-				if (oldItem.type == ItemID.None && newItem.type == ItemID.None)
-					return false;
-
+				var (itemType, prefix, stack) = ReadTmlItem(args.Data);
 				newItem.SetDefaults(itemType);
 				newItem.stack = stack;
 				newItem.Prefix(prefix);
+
+				if (oldItem.type == ItemID.None && newItem.type == ItemID.None)
+					return false;
 
 				if (OnDisplayDollItemSync(args.Player, args.Data, playerIndex, tileEntityID, displayDoll, slot, isDye, oldItem, newItem))
 					return true;
@@ -4492,11 +4524,9 @@ namespace TShockAPI
 		{
 			short tileX = args.Data.ReadInt16();
 			short tileY = args.Data.ReadInt16();
-			short itemID = args.Data.ReadInt16();
-			byte prefix = args.Data.ReadInt8();
-			short stack = args.Data.ReadInt16();
+			var (itemID, prefix, stack) = ReadTmlItem(args.Data);
 
-			if (OnFoodPlatterTryPlacing(args.Player, args.Data, tileX, tileY, itemID, prefix, stack))
+			if (OnFoodPlatterTryPlacing(args.Player, args.Data, tileX, tileY, (short)itemID, (byte)prefix, (short)stack))
 				return true;
 
 			return false;

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using TerrariaApi.Server;
@@ -52,7 +52,6 @@ public static class PluginRelinker
         var api = GetOrAddRef(module, ApiAssembly);
         var tshock = GetOrAddRef(module, TShockAssembly);
         var unsupported = new List<string>();
-        var usesITile = false;
 
         foreach (var typeRef in module.GetTypeReferences())
             ConsiderRuntime(typeRef, unsupported);
@@ -69,8 +68,8 @@ public static class PluginRelinker
             if (scope.Name == "OTAPI.Runtime")
                 continue;
 
-            if (typeRef.Name == "ITile")
-                usesITile = true;
+            if (RewriteTileType(typeRef, api))
+                continue;
 
             var target = Map(typeRef);
             if (target is null || scope.Name.Equals(target, StringComparison.Ordinal))
@@ -85,13 +84,6 @@ public static class PluginRelinker
             };
         }
 
-        if (usesITile)
-        {
-            ServerApi.LogWriter.ServerWriteLine(
-                $"Relinker: {pluginId} references ITile; TML Tile is a struct and does not implement it.",
-                TraceLevel.Warning);
-        }
-
         ApplyKnownMembers(module);
 
         using var output = new MemoryStream();
@@ -101,9 +93,40 @@ public static class PluginRelinker
 
     static bool IsKnownSource(string name) => name is
         "OTAPI" or "OTAPI.Runtime" or "OTAPI.Upcoming" or
-        "TerrariaServer" or "Terraria" or
+        "TerrariaServer" or "Terraria" or "ModFramework" or
         "Microsoft.Xna.Framework" or "Microsoft.Xna.Framework.Game" or
         "Microsoft.Xna.Framework.Graphics" or "Microsoft.Xna.Framework.Xact";
+
+    static bool RewriteTileType(TypeReference type, AssemblyNameReference api)
+    {
+        var ns = type.Namespace ?? "";
+        if (type.Name == "ITile" && ns is "Terraria" or "OTAPI.Tile")
+        {
+            type.Namespace = "Terraria";
+            type.Scope = api;
+            return true;
+        }
+        if (type.Name == "Tile" && ns == "Terraria")
+        {
+            type.Name = "TileRef";
+            type.Namespace = "TerrariaApi.Server";
+            type.Scope = api;
+            return true;
+        }
+        if (type.Name is "ITileCollection" or "TileCollection")
+        {
+            type.Name = "ITileCollection";
+            type.Namespace = "OTAPI.Tile";
+            type.Scope = api;
+            return true;
+        }
+        if (type.Name == "ICollection`1" && ns == "ModFramework")
+        {
+            type.Scope = api;
+            return true;
+        }
+        return false;
+    }
 
     static void ConsiderRuntime(TypeReference? type, List<string> unsupported)
     {
@@ -122,7 +145,7 @@ public static class PluginRelinker
     static string? Map(TypeReference type)
     {
         var ns = type.Namespace ?? "";
-        if (type.Name == "ITile" && ns is "Terraria" or "OTAPI.Tile")
+        if (ns is "ModFramework" || ns.StartsWith("ModFramework.", StringComparison.Ordinal))
             return ApiAssembly;
         if (ns.StartsWith("Microsoft.Xna.Framework", StringComparison.Ordinal))
             return FnaAssembly;
@@ -149,6 +172,13 @@ public static class PluginRelinker
         "ladyBugRainBoost",
     ];
 
+    static readonly string[] TileDataFields =
+    [
+        "type", "wall", "liquid",
+        "sTileHeader", "bTileHeader", "bTileHeader2", "bTileHeader3",
+        "frameX", "frameY",
+    ];
+
     static void ApplyKnownMembers(ModuleDefinition module)
     {
         var widen = new HashSet<string>(StringComparer.Ordinal);
@@ -158,6 +188,16 @@ public static class PluginRelinker
                 continue;
             widen.Add(field.Name);
             field.FieldType = module.TypeSystem.Double;
+        }
+
+        var tilesProp = typeof(TileAdapter).GetProperty(nameof(TileAdapter.Tiles))!;
+        var tilesGet = module.ImportReference(tilesProp.GetMethod);
+        var tilesSet = module.ImportReference(tilesProp.SetMethod);
+        var tileAccessors = new Dictionary<string, (MethodReference Get, MethodReference Set)>(StringComparer.Ordinal);
+        foreach (var name in TileDataFields)
+        {
+            var prop = typeof(TileRef).GetProperty(name, BindingFlags.Public | BindingFlags.Instance)!;
+            tileAccessors[name] = (module.ImportReference(prop.GetMethod!), module.ImportReference(prop.SetMethod!));
         }
 
         foreach (var type in module.GetTypes())
@@ -173,12 +213,58 @@ public static class PluginRelinker
                 if (inst.OpCode == OpCodes.Ldstr && inst.Operand is "SQLite.MS")
                     inst.Operand = "SQLite";
 
+                if (inst.OpCode == OpCodes.Ldstr && inst.Operand is "免禁指令")
+                {
+                    var call = inst.Next;
+                    var br = call?.Next;
+                    var skip = br?.Next;
+                    if (call is not null
+                        && call.OpCode == OpCodes.Callvirt
+                        && br is not null
+                        && (br.OpCode == OpCodes.Brfalse || br.OpCode == OpCodes.Brfalse_S)
+                        && skip is not null
+                        && skip.OpCode == OpCodes.Ret)
+                    {
+                        skip.OpCode = OpCodes.Nop;
+                    }
+                }
+
                 if (inst.Operand is not FieldReference field)
                     continue;
 
                 if (field.Name == "SQLiteMS" && field.DeclaringType.Name == "ProviderName")
                 {
                     inst.Operand = new FieldReference("SQLite", field.FieldType, field.DeclaringType);
+                    continue;
+                }
+
+                if (field.Name == "tile" && field.DeclaringType.FullName == "Terraria.Main")
+                {
+                    if (inst.OpCode == OpCodes.Ldsfld)
+                    {
+                        inst.OpCode = OpCodes.Call;
+                        inst.Operand = tilesGet;
+                    }
+                    else if (inst.OpCode == OpCodes.Stsfld)
+                    {
+                        inst.OpCode = OpCodes.Call;
+                        inst.Operand = tilesSet;
+                    }
+                    continue;
+                }
+
+                if (field.DeclaringType.Name == "TileRef" && tileAccessors.TryGetValue(field.Name, out var accessors))
+                {
+                    if (inst.OpCode == OpCodes.Ldfld)
+                    {
+                        inst.OpCode = OpCodes.Callvirt;
+                        inst.Operand = accessors.Get;
+                    }
+                    else if (inst.OpCode == OpCodes.Stfld)
+                    {
+                        inst.OpCode = OpCodes.Callvirt;
+                        inst.Operand = accessors.Set;
+                    }
                     continue;
                 }
 

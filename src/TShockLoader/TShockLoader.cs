@@ -31,8 +31,16 @@ public class tShockLoaderSystem : ModSystem
         if (!Main.dedServ)
             return;
 
-        EnglishLanguage.RebuildContentNames();
         TShock.Utils.ComputeMaxStyles();
+    }
+
+    public override void PostSetupRecipes()
+    {
+        if (!Main.dedServ)
+            return;
+
+        // ItemLoader.FinishSetup fills Lang._itemNameCache after PostSetupContent.
+        EnglishLanguage.RebuildContentNames();
         Mod.Logger.Info($"content names vanillaItems={ItemID.Count} items={ItemLoader.ItemCount} npcs={NPCLoader.NPCCount} buffs={BuffLoader.BuffCount} prefixes={PrefixLoader.PrefixCount} tiles={TileLoader.TileCount}");
     }
 

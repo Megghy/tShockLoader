@@ -21,15 +21,10 @@
       <_PackedLib Include="$(TargetDir)TerrariaApi.Server.dll" />
       <_PackedLib Include="$(TargetDir)TShockAPI.dll" />
       <_PackedLib Include="$(TargetDir)TShockLoader.Abstractions.dll" />
-      <_PackedLib Include="$(TargetDir)BCrypt.Net-Next.dll" />
-      <_PackedLib Include="$(TargetDir)GetText.dll" />
-      <_PackedLib Include="$(TargetDir)HttpServer.dll" />
-      <_PackedLib Include="$(TargetDir)MySqlConnector.dll" />
-      <_PackedLib Include="$(TargetDir)Npgsql.dll" />
-      <_PackedLib Include="$(TargetDir)ReflectionMagic.dll" />
-      <_PackedLib Include="$(TargetDir)System.Data.SQLite.dll" />
+      <_VendorLib Include="$(ProjectDir)..\TShockAPI\lib\*.dll" Exclude="$(ProjectDir)..\TShockAPI\lib\SQLite.Interop.dll" />
     </ItemGroup>
-    <Copy SourceFiles="@(_PackedLib)" DestinationFolder="$(ProjectDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_PackedLib);@(_VendorLib)" DestinationFolder="$(ProjectDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_VendorLib)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(ProjectDir)..\TShockAPI\lib\SQLite.Interop.dll" DestinationFolder="$(ProjectDir)native" />
   </Target>
 </Project>

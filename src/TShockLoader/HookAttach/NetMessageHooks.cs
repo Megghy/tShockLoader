@@ -19,6 +19,12 @@ public static class NetMessageHooks
 
     static void OnCheckBytes(On_NetMessage.orig_CheckBytes orig, int bufferIndex)
     {
+        // tML CheckBytes reads reader.BaseStream before GetData; MessageBuffer ctor leaves reader null.
+        // OTAPI/SendData already do this for writer — restore the same contract for inbound packets.
+        var buffer = NetMessage.buffer[bufferIndex];
+        if (buffer.reader == null)
+            buffer.ResetReader();
+
         try
         {
             orig(bufferIndex);

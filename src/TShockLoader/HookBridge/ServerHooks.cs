@@ -81,5 +81,7 @@ internal static class ServerHooks
 			}
 			_hookManager.InvokeServerSocketReset(client);
 		}
+
+		orig(client);
 	}
 }

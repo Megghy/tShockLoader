@@ -172,6 +172,15 @@ namespace Terraria
         void ClearBlockPaintAndCoating();
 
         void ClearWallPaintAndCoating();
-    }
 
+        bool HasTile { get => active(); set => active(value); }
+
+        ushort TileType { get => type; set => type = value; }
+
+        ushort WallType { get => wall; set => wall = value; }
+
+        byte LiquidAmount { get => liquid; set => liquid = value; }
+
+        bool IsActuated { get => inActive(); set => inActive(value); }
+    }
 }
