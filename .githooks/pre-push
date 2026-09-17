@@ -1,0 +1,5 @@
+#!/bin/sh
+remote="$1"
+[ "$remote" = origin ] || exit 0
+root="$(git rev-parse --show-toplevel)"
+exec pwsh -NoProfile -File "$root/scripts/sync-subtrees.ps1" -Push

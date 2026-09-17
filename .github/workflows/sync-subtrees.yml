@@ -1,0 +1,68 @@
+name: Sync subtrees
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/TShockAPI/**
+      - src/TerrariaApi.Server/**
+      - scripts/sync-subtrees.ps1
+      - .github/workflows/sync-subtrees.yml
+  workflow_dispatch:
+
+concurrency:
+  group: sync-subtrees-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push tshock/tsapi tml
+        env:
+          TSHOCK_KEY: ${{ secrets.TSHOCK_SUBTREE_KEY }}
+          TSAPI_KEY: ${{ secrets.TSAPI_SUBTREE_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:TSHOCK_KEY -or -not $env:TSAPI_KEY) {
+            throw 'missing TSHOCK_SUBTREE_KEY / TSAPI_SUBTREE_KEY'
+          }
+
+          $ssh = Join-Path $HOME '.ssh'
+          New-Item -ItemType Directory -Force -Path $ssh | Out-Null
+          $tshockKey = Join-Path $ssh 'tshock'
+          $tsapiKey = Join-Path $ssh 'tsapi'
+          Set-Content -LiteralPath $tshockKey -Value ($env:TSHOCK_KEY.Trim() + "`n") -NoNewline
+          Set-Content -LiteralPath $tsapiKey -Value ($env:TSAPI_KEY.Trim() + "`n") -NoNewline
+          chmod 600 $tshockKey
+          chmod 600 $tsapiKey
+
+          @"
+          Host github-tshock
+            HostName github.com
+            User git
+            IdentityFile $tshockKey
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+          Host github-tsapi
+            HostName github.com
+            User git
+            IdentityFile $tsapiKey
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+          "@ | Set-Content -LiteralPath (Join-Path $ssh 'config')
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git remote add tshock git@github-tshock:Megghy/tShockLoader.TShock.git
+          git remote add tsapi git@github-tsapi:Megghy/tShockLoader.TSAPI.git
+          pwsh -NoProfile -File scripts/sync-subtrees.ps1 -Push
