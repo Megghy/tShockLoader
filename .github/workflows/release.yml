@@ -1,0 +1,145 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TML_VERSION: v2026.07.3.0
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+  SDL_VIDEODRIVER: dummy
+  SDL_AUDIODRIVER: dummy
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - name: Cache tModLoader zip
+        id: cache-tml
+        uses: actions/cache@v4
+        with:
+          path: .ci/tModLoader.zip
+          key: tml-${{ env.TML_VERSION }}
+
+      - name: Download tModLoader
+        if: steps.cache-tml.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path .ci | Out-Null
+          gh release download $env:TML_VERSION --repo tModLoader/tModLoader --pattern tModLoader.zip --dir .ci
+          if ($LASTEXITCODE -ne 0) { throw "gh release download $($env:TML_VERSION) failed" }
+
+      - name: Unpack tModLoader
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $pwd.Path '.ci/tModLoader.zip'
+          if (-not (Test-Path $zip)) { throw "missing $zip" }
+          $tml = Join-Path $env:RUNNER_TEMP 'tModLoader'
+          if (Test-Path $tml) { Remove-Item $tml -Recurse -Force }
+          New-Item -ItemType Directory -Force -Path $tml | Out-Null
+          tar -xf $zip -C $tml
+          if ($LASTEXITCODE -ne 0) { throw "tar extract failed: $LASTEXITCODE" }
+          if (-not (Test-Path (Join-Path $tml 'tMLMod.targets'))) {
+            $inner = Get-ChildItem $tml -Directory | Select-Object -First 1
+            if (-not $inner) { throw 'tModLoader.zip layout unexpected' }
+            $tml = $inner.FullName
+          }
+          if (-not (Test-Path (Join-Path $tml 'tMLMod.targets'))) {
+            throw "tMLMod.targets not found under $tml"
+          }
+          "TML_PATH=$tml" | Add-Content $env:GITHUB_ENV
+
+      - name: Pack tmod
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = Get-Content src/TShockLoader/build.txt |
+            Where-Object { $_ -match '^\s*version\s*=' } |
+            ForEach-Object { ($_ -split '=', 2)[1].Trim() } |
+            Select-Object -First 1
+          if (-not $version) { throw 'version missing from src/TShockLoader/build.txt' }
+          "MOD_VERSION=$version" | Add-Content $env:GITHUB_ENV
+
+          $save = Join-Path $pwd.Path '.ci/tml-save'
+          New-Item -ItemType Directory -Force -Path $save | Out-Null
+          $saveArg = $save.Replace('\', '/')
+          $tml = $env:TML_PATH
+          dotnet build src/TShockLoader/tShockLoader.csproj -c Release --verbosity minimal `
+            -p:BuildMod=true `
+            "-p:tMLSteamPath=$tml" `
+            "-p:ExtraBuildModFlags=-tmlsavedirectory $saveArg -steamworkshopfolder none"
+          if ($LASTEXITCODE -ne 0) { throw "dotnet build failed: $LASTEXITCODE" }
+
+          $tmod = @(
+            (Join-Path $save 'Mods/tShockLoader.tmod'),
+            (Join-Path $env:USERPROFILE 'Documents/My Games/Terraria/tModLoader/Mods/tShockLoader.tmod'),
+            (Join-Path $env:USERPROFILE 'Documents/My games/Terraria/tModLoader/Mods/tShockLoader.tmod')
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $tmod -and (Test-Path $save)) {
+            $tmod = Get-ChildItem -Path $save -Recurse -Filter tShockLoader.tmod -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $tmod) { throw 'packed tShockLoader.tmod not found' }
+          $length = (Get-Item $tmod).Length
+          if ($length -lt 1MB) { throw "tmod too small: $length bytes ($tmod)" }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item $tmod dist/tShockLoader.tmod
+          Write-Host "packed dist/tShockLoader.tmod ($length bytes) version=$version"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tShockLoader.tmod
+          path: dist/tShockLoader.tmod
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $tag = "v$($env:MOD_VERSION)"
+          $localHash = (Get-FileHash dist/tShockLoader.tmod -Algorithm SHA256).Hash.ToLowerInvariant()
+          Write-Host "tag=$tag sha256=$localHash"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag dist/tShockLoader.tmod --title $tag --generate-notes
+            if ($LASTEXITCODE -ne 0) { throw "gh release create $tag failed" }
+            Write-Host "created $tag"
+            return
+          }
+
+          $digest = gh api "repos/$($env:GITHUB_REPOSITORY)/releases/tags/$tag" --jq '.assets[] | select(.name=="tShockLoader.tmod") | .digest'
+          $remoteHash = "$digest" -replace '^sha256:', '' -replace '\s', ''
+          if ($remoteHash -and $remoteHash.ToLowerInvariant() -eq $localHash) {
+            Write-Host "tmod unchanged, skip upload"
+            return
+          }
+
+          gh release upload $tag dist/tShockLoader.tmod --clobber
+          if ($LASTEXITCODE -ne 0) { throw "gh release upload $tag failed" }
+          Write-Host "updated $tag asset"
