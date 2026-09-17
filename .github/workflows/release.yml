@@ -32,9 +32,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
+          dotnet-version: 8.0.x
 
       - name: Cache tModLoader zip
         id: cache-tml
@@ -86,7 +84,11 @@ jobs:
           $save = Join-Path $pwd.Path '.ci/tml-save'
           New-Item -ItemType Directory -Force -Path $save | Out-Null
           $saveArg = $save.Replace('\', '/')
-          $tml = $env:TML_PATH
+          # Command-line tMLSteamPath is immutable; tMLMod.targets concatenates $(tMLSteamPath)$(tMLPath), so it needs a trailing slash.
+          $tml = (($env:TML_PATH).TrimEnd('\', '/') -replace '\\', '/') + '/'
+          if (-not (Test-Path "${tml}tModLoader.dll")) { throw "tModLoader.dll missing at $tml" }
+          if (-not (Test-Path "${tml}tMLMod.targets")) { throw "tMLMod.targets missing at $tml" }
+          Set-Content global.json '{"sdk":{"version":"8.0.0","rollForward":"latestFeature"}}'
           dotnet build src/TShockLoader/tShockLoader.csproj -c Release --verbosity minimal `
             -p:BuildMod=true `
             "-p:tMLSteamPath=$tml" `
