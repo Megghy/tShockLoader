@@ -64,8 +64,9 @@
 
 **Content post-setup:** (`tShockLoaderSystem`)
 
-1. `PostSetupContent` rebuilds English content names and `TShock.Utils.ComputeMaxStyles` — `src/TShockLoader/TShockLoader.cs`
-2. `OnWorldLoad` runs `ContentContractProbe.Verify` when sample mod `P3Content` is present
+1. `PostSetupContent` runs `TShock.Utils.ComputeMaxStyles` — `src/TShockLoader/TShockLoader.cs`
+2. `PostSetupRecipes` rebuilds English content names (`EnglishLanguage.RebuildContentNames`) after `ItemLoader.FinishSetup` fills `Lang._itemNameCache`
+3. `OnWorldLoad` runs `ContentContractProbe.Verify` when sample mod `P3Content` is present
 
 **Unload:** (`PluginHost.Stop`)
 
@@ -111,8 +112,8 @@
 
 **tShockLoader Mod:**
 - Location: `src/TShockLoader/TShockLoader.cs`
-- Triggers: tML `Mod.Load` / `Unload`; `ModSystem.PostSetupContent` / `OnWorldLoad`; `GlobalTile.PreHitWire` → `OTAPI.Hooks.Wiring.InvokeAnnouncementBox`
-- Responsibilities: Start/stop host; refresh content name tables; optional P3 content contract
+- Triggers: tML `Mod.Load` / `Unload`; `ModSystem.PostSetupContent` / `PostSetupRecipes` / `OnWorldLoad`; `GlobalTile.PreHitWire` → `OTAPI.Hooks.Wiring.InvokeAnnouncementBox`
+- Responsibilities: Start/stop host; max styles then English content names after recipe setup; optional P3 content contract
 
 **PluginHost.Start / Stop:**
 - Location: `src/TShockLoader/Runtime/PluginHost.cs`

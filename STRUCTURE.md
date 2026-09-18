@@ -50,7 +50,7 @@ tShockLoader/
 
 **`src/TerrariaApi.Server/`:**
 - Purpose: Plugin API, hook manager, event args, OTAPI/ITile compatibility shims
-- Key files: `ServerApi.cs`, `TerrariaPlugin.cs`, `HookManager.cs`, `Compatibility/OTAPI/Hooks.cs`
+- Key files: `ServerApi.cs`, `TerrariaPlugin.cs`, `HookManager.cs`, `Compatibility/OTAPI/Hooks.cs`, `Compatibility/Terraria/ITile.cs`, `TileRef.cs`, `TileHeaders.cs`
 
 **`src/TShockAPI/`:**
 - Purpose: TShock core plugin
@@ -66,8 +66,8 @@ tShockLoader/
 - Key files: `install.md`, `configuration.md`, `compatibility.md`, `plugin-development.md`, `faq.md`, `versions.md`
 
 **`scripts/`:**
-- Purpose: Release checks
-- Key files: `verify-release.ps1`
+- Purpose: Release checks and subtree sync
+- Key files: `verify-release.ps1`, `sync-subtrees.ps1` (used by `.githooks/pre-push` and `.github/workflows/sync-subtrees.yml`)
 
 **`dev-docs/`:**
 - Purpose: Internal architecture notes (not operator-facing)

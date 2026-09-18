@@ -22,6 +22,8 @@ tShockLoader 用于在 tModLoader 1.4.4 专服上运行 TShock 5.2.3（TSAPI 2.1
 
 通过单个 `tShockLoader.tmod` 文件，让 tModLoader 专服支持 TShock 的账号认证、权限组、管理指令、REST API 以及大部分基于 TSAPI 2.1 编译的第三方插件。
 
+![tShockLoader 专服启动](docs/images/server-startup.png)
+
 ---
 
 ## 功能概述
@@ -131,6 +133,8 @@ Server_Root/
 部分已验证插件：`ListPlugins`、`ConsoleSql`、`HelpPlus`、`RealTime`、`TimeRate`、`LazyAPI` 及其常用组件（AutoBroadcast、Back、VeinMiner 等）。
 
 详情参见 [插件兼容矩阵](docs/compatibility.md)。
+
+![tShockLoader 专服运行](docs/images/server-online.png)
 
 ---
 
