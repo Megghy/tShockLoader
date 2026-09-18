@@ -15,7 +15,6 @@ sealed class LoaderPaths
     {
         var install = Path.GetFullPath(AppContext.BaseDirectory);
         string? instanceArg = null;
-        string? tmlSave = null;
         string? configPath = null;
         string? logPath = null;
 
@@ -23,15 +22,15 @@ sealed class LoaderPaths
         {
             if (TryReadValue(args, ref i, "-instancepath", out var value))
                 instanceArg = value;
-            else if (TryReadValue(args, ref i, "-tmlsavedirectory", out value))
-                tmlSave = value;
             else if (TryReadValue(args, ref i, "-configpath", out value))
                 configPath = value;
             else if (TryReadValue(args, ref i, "-logpath", out value))
                 logPath = value;
         }
 
-        var instance = ResolveAgainst(install, instanceArg ?? tmlSave ?? install);
+        var instance = instanceArg is null
+            ? Path.Combine(install, "tShockLoader")
+            : ResolveAgainst(install, instanceArg);
         var data = configPath is null
             ? Path.Combine(instance, "tshock")
             : ResolveAgainst(instance, configPath);

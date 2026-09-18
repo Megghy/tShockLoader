@@ -62,7 +62,7 @@ tShockLoader 通过内置的 Relinker 在插件加载时进行内存重写：
 
 ## 4. 插件安装与排查
 
-1. 将第三方插件 `.dll` 放入 `instance/ServerPlugins/` 目录。
+1. 将第三方插件 `.dll` 放入 `tShockLoader/ServerPlugins/` 目录。
 2. 启动服务端，观察控制台是否有 `Loaded plugin: <插件名>` 输出。
 3. 若报错找不到依赖，请检查是否缺少该插件引用的第三方外部 DLL。
 4. 若报错检测到核心程序集副本，请删除 `ServerPlugins/` 中的 `TShockAPI.dll` 或 `TerrariaApi.Server.dll`。

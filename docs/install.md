@@ -29,12 +29,12 @@
 
 ```powershell
 # Windows
-dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save -instancepath ./instance
+dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save
 ```
 
 ```bash
 # Linux
-dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save -instancepath ./instance
+dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save
 ```
 
 ---
@@ -47,7 +47,7 @@ Server_Root/
 ├── Mods/
 │   ├── enabled.json                # 模组列表
 │   └── tShockLoader.tmod           # 发行文件
-└── instance/                       # 由 -instancepath 指定
+└── tShockLoader/                  # 默认实例目录（可用 -instancepath 覆盖）
     ├── ServerPlugins/              # 第三方插件 (.dll)
     └── tshock/                     # 配置与数据
         ├── config.json             # 核心配置
@@ -58,9 +58,8 @@ Server_Root/
 
 ### 启动参数优先级
 
-- `-instancepath`：指定 tShockLoader 实例根目录（包含 `ServerPlugins/` 和 `tshock/`）。
-- `-tmlsavedirectory`：指定 tModLoader 存档保存目录。
-- 若同时指定两者，`-instancepath` 优先作为插件和 TShock 数据根目录；若未指定 `-instancepath`，则以 `-tmlsavedirectory` 为基准。
+- `-instancepath`：可选。指定实例根目录（包含 `ServerPlugins/` 和 `tshock/`）；未指定时默认为专服目录下的 `tShockLoader/`。
+- `-tmlsavedirectory`：指定 tModLoader 存档保存目录（世界、玩家），与实例目录无关。
 
 > **提示**：请勿把 `TShockAPI.dll` 或 `TerrariaApi.Server.dll` 复制到 `ServerPlugins/`，否则启动时会因检测到重复核心而报错退出。
 
@@ -75,13 +74,13 @@ Server_Root/
 dotnet ./tModLoader.dll -server \
   -config ./servers/s1/serverconfig.txt \
   -tmlsavedirectory ./servers/s1/save \
-  -instancepath ./servers/s1/instance
+  -instancepath ./servers/s1/tShockLoader
 
 # 子服 2 (端口 7778)
 dotnet ./tModLoader.dll -server \
   -config ./servers/s2/serverconfig.txt \
   -tmlsavedirectory ./servers/s2/save \
-  -instancepath ./servers/s2/instance
+  -instancepath ./servers/s2/tShockLoader
 ```
 
 不同实例使用各自独立的 `tshock.sqlite` 和日志文件，不会发生文件锁冲突。
@@ -94,4 +93,4 @@ dotnet ./tModLoader.dll -server \
 2. 用新版本的 `tShockLoader.tmod` 替换 `Mods/tShockLoader.tmod`。
 3. 重新启动服务器。
 
-更新时不要删除或覆盖 `instance/tshock/`（配置文件与数据库）和 `instance/ServerPlugins/` 目录。
+更新时不要删除或覆盖 `tShockLoader/tshock/`（配置文件与数据库）和 `tShockLoader/ServerPlugins/` 目录。

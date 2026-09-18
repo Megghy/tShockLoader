@@ -7,12 +7,12 @@
 ## 1. 启动与报错
 
 ### Q: 启动报错 `ServerPlugins 目录中发现了核心程序集副本`？
-- **原因**：在 `instance/ServerPlugins/` 目录中放入了 `TShockAPI.dll`、`TerrariaApi.Server.dll` 或 `tShockLoader.dll`。
+- **原因**：在 `tShockLoader/ServerPlugins/` 目录中放入了 `TShockAPI.dll`、`TerrariaApi.Server.dll` 或 `tShockLoader.dll`。
 - **处理**：删除 `ServerPlugins/` 下的核心 DLL。核心程序集已内置于 `tShockLoader.tmod`，不应重复放置。
 
 ### Q: 报错 `System.IO.FileNotFoundException: 找不到指定的依赖程序集`？
 - **原因**：部分第三方插件依赖未内置的 NuGet 库。
-- **处理**：将该插件所需的依赖 `.dll` 一同放入 `instance/ServerPlugins/` 目录。
+- **处理**：将该插件所需的依赖 `.dll` 一同放入 `tShockLoader/ServerPlugins/` 目录。
 
 ### Q: 启动时提示 `IOException: 句柄无效` (Invalid handle)？
 - **原因**：在无交互控制台的环境（如部分后台服务、脚本调用）下，tModLoader 专服在模组加载后执行了 `Console.Clear()`。
@@ -34,8 +34,8 @@
 
 ### Q: 多开服务器时如何避免数据冲突？
 - **说明**：启动时使用 `-instancepath` 指定不同的实例目录，并配置不同的端口：
-  - 实例 1：`-instancepath ./servers/s1/instance`，端口 `7777`
-  - 实例 2：`-instancepath ./servers/s2/instance`，端口 `7778`
+  - 实例 1：`-instancepath ./servers/s1/tShockLoader`，端口 `7777`
+  - 实例 2：`-instancepath ./servers/s2/tShockLoader`，端口 `7778`
   各实例将使用各自独立的 `tshock.sqlite` 数据库与日志文件。
 
 ### Q: 如何安全停止服务器？

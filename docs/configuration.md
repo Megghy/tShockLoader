@@ -6,7 +6,7 @@
 
 ## 1. 核心配置文件
 
-首次启动服务端后，将在 `instance/tshock/` 目录下生成默认配置文件：
+首次启动服务端后，将在 `tShockLoader/tshock/` 目录下生成默认配置文件：
 
 - **`config.json`**：TShock 主配置（基础设置、聊天规则、反作弊规则、REST API 开关等）。
 - **`sscconfig.json`**：服务端角色（Server-Side Characters）存档配置。

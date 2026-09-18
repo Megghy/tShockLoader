@@ -53,7 +53,7 @@
 **Dedicated-server start:** (`PluginHost.Start`)
 
 1. `tShockLoader.Load` — `src/TShockLoader/TShockLoader.cs` (skip if not `Main.dedServ`)
-2. Resolve `-instancepath` / `-tmlsavedirectory` / `-configpath` / `-logpath` — `src/TShockLoader/Runtime/LoaderPaths.cs`
+2. Resolve `-instancepath` / `-configpath` / `-logpath` — `src/TShockLoader/Runtime/LoaderPaths.cs`
 3. Extract `native/SQLite.Interop.dll` into instance cache and bind `DllImportResolver` — `PluginHost.ExtractNativeLibraries`
 4. `ServerApi.Bind(Main.instance, …/ServerLog.txt)` — `src/TerrariaApi.Server/ServerApi.cs`
 5. `HookAttach.HookManager.AttachAll` then `ApiHooks.Attach(ServerApi.Hooks)` — `src/TShockLoader/HookAttach/`, `src/TShockLoader/HookBridge/`
@@ -105,7 +105,7 @@
 - Location: `src/TShockLoader/Compatibility/Relinker/PluginRelinker.cs`
 
 **LoaderPaths:**
-- Purpose: Instance root defaults to `-instancepath` else `-tmlsavedirectory` else install dir; plugins at `{instance}/ServerPlugins`; TShock data at `{instance}/tshock` unless `-configpath`.
+- Purpose: Instance root defaults to `-instancepath` else `{install}/tShockLoader`; plugins at `{instance}/ServerPlugins`; TShock data at `{instance}/tshock` unless `-configpath`.
 - Location: `src/TShockLoader/Runtime/LoaderPaths.cs`
 
 ## Entry Points

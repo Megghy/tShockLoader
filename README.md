@@ -34,7 +34,7 @@ tShockLoader 用于在 tModLoader 1.4.4 专服上运行 TShock 5.2.3（TSAPI 2.1
   - 适配 tModLoader 的动态内容注册（物品、NPC、方块、Buff、前缀等 ID 上限）。
   - 自动放行 tModLoader 扩展数据包（ModPacket/ModFile 249–253），原版数据包仍受 TShock 权限与反作弊规则控制。
 - **插件兼容（Relinker）**：内置运行时重写器，将针对原版 TShock 5.2.3 编译的第三方插件映射到 tModLoader 与 FNA 运行时。
-- **目录隔离与多实例**：支持 `-instancepath` 参数，将配置、数据库（`tshock/`）和插件（`ServerPlugins/`）与游戏安装目录分离。
+- **目录隔离与多实例**：默认将配置、数据库（`tshock/`）和插件（`ServerPlugins/`）写入专服目录下的 `tShockLoader/`，可用 `-instancepath` 覆盖。
 
 ---
 
@@ -85,16 +85,14 @@ flowchart TD
 
 ### 3. 启动专服
 
-使用 `-instancepath` 指定数据存储目录：
-
 **Windows (PowerShell):**
 ```powershell
-dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save -instancepath ./instance
+dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save
 ```
 
 **Linux (Bash):**
 ```bash
-dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save -instancepath ./instance
+dotnet ./tModLoader.dll -server -config ./serverconfig.txt -tmlsavedirectory ./save
 ```
 
 ### 4. 设置超级管理员
@@ -114,7 +112,7 @@ Server_Root/
 ├── Mods/
 │   ├── enabled.json           # 模组启用列表
 │   └── tShockLoader.tmod      # 发行文件
-└── instance/                  # 实例数据目录 (-instancepath)
+└── tShockLoader/             # 默认实例目录（可用 -instancepath 覆盖）
     ├── ServerPlugins/         # 第三方插件 (.dll)
     └── tshock/                # TShock 数据目录
         ├── config.json        # 配置文件
@@ -128,7 +126,7 @@ Server_Root/
 
 ## 插件支持
 
-将针对 TShock 5.2.3 编译的插件 `.dll` 放入 `instance/ServerPlugins/` 目录，启动服务器即可自动加载。可通过 `/plugins` 指令查看加载状态。
+将针对 TShock 5.2.3 编译的插件 `.dll` 放入 `tShockLoader/ServerPlugins/` 目录，启动服务器即可自动加载。可通过 `/plugins` 指令查看加载状态。
 
 部分已验证插件：`ListPlugins`、`ConsoleSql`、`HelpPlus`、`RealTime`、`TimeRate`、`LazyAPI` 及其常用组件（AutoBroadcast、Back、VeinMiner 等）。
 

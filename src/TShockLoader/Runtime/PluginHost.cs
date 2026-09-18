@@ -38,7 +38,7 @@ public static class PluginHost
             ExtractNativeLibraries(owner, paths);
             ServerApi.Bind(Main.instance, Path.Combine(paths.LogRoot, "ServerLog.txt"));
             bound = true;
-            Log($"paths install={paths.InstallRoot} instance={paths.InstanceRoot} plugins={paths.PluginRoot} data={paths.TShockDataRoot}");
+            Log($"config directory={paths.TShockDataRoot}");
 
             HookAttach.HookManager.AttachAll();
             ApiHooks.Attach(ServerApi.Hooks);
